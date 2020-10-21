@@ -14,7 +14,7 @@ PLAYERS_IN_LINEUP = 9
 
 @pytest.fixture
 def initial_size():
-    return random.randint(25, 100)
+    return random.choice([10, 20, 30])
 
 
 @pytest.fixture

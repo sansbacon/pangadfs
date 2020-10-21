@@ -100,9 +100,12 @@ class PanGaDFS:
             self._weighted_wrs = self._weighted_pos('WR')
         return self._weighted_wrs
 
-    def _breed_two(self, lineups, lineup_size=9):
-        """Breeds two lineups"""
-        while True:
+    def _breed_two(self, lineups, lineup_size=9, max_attempts=10):
+        """Breeds two lineups
+           Tries max_attempts, if fail then breed with new lineup
+        """
+        attempts = 0
+        while attempts < max_attempts:
             # randomly assign father/mother for each lineup slot
             # this should be a 9-item array of zeros and ones            
             mother_or_father = np.random.binomial(1, .5, size=lineup_size)
@@ -120,6 +123,8 @@ class PanGaDFS:
                 new_lineup['lid'] = uuid.uuid4()
                 new_lineup['fitness'] = self.fitness(new_lineup)
                 return new_lineup
+            attempts += 1
+        return self._breed_two((random.choice(lineups), self.create_lineup))
 
     def _weighted_pos(self, pos):
         """Gets weighted position"""
@@ -143,10 +148,20 @@ class PanGaDFS:
 
         # make new lineups
         for _ in range(len(lineup_fitness)):
+            # weighted selection of lineup ids by fitness
             lid1, lid2 = lineup_fitness.sample(2, weights=weights).index
+
+            # select the two lineups and breed
             lu1 = self.lineups.query(f'lid == {lid1}')
             lu2 = self.lineups.query(f'lid == {lid2}')
-            new_lineups.append(self._breed_two((lu1, lu2)))
+            new_lineup = self._breed_two((lu1, lu2))
+
+            # apply mutation according to mutation rate
+            if random.random() <= self.mutation_rate:
+                new_lineup = self._breed_two((new_lineup, self.create_lineup))
+
+            # add lineup
+            new_lineups.append(new_lineup)
 
         return pd.concat(new_lineups)
 
