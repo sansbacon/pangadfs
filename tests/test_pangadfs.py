@@ -27,6 +27,11 @@ def players(test_directory):
     return pd.read_csv(test_directory / "players.csv")
     
 
+@pytest.fixture
+def results(test_directory):
+    return pd.read_csv(test_directory / "results.csv")
+    
+
 def test_players(players):
     """Tests team_counts"""
     assert isinstance(players, pd.core.api.DataFrame)
@@ -36,10 +41,8 @@ def test_initial_population(benchmark, players, initial_size, tprint):
     pg = PanGaDFS(player_pool=players, 
                   initial_size=initial_size,
                   roulette_method='composite')
-    lineups = benchmark.pedantic(pg.initial_population, iterations=1, rounds=2)
+    lineups = pg.initial_population()
     lineup = lineups.iloc[0:9, :]
-    tprint(lineup)
-    tprint((round(lineup.proj.sum(), 2), lineup.salary.sum()))
     assert len(lineups) == initial_size * PLAYERS_IN_LINEUP
 
 
@@ -53,7 +56,31 @@ def test_breed_two(lu, tprint):
 def test_breed(players, tprint):
     pg = PanGaDFS(player_pool=players, 
                   initial_size=10)
-    lineups = pg.initial_population()
+    _ = pg.initial_population()
     new_lineups = pg.breed()
-    assert len(new_lineups) == len(lineups)
+    tprint(new_lineups.iloc[0:9, :].to_string())
+    assert len(new_lineups) == len(pg.lineups)
 
+
+def test_breed_generations(players, tprint):
+    pg = PanGaDFS(player_pool=players, 
+                  initial_size=500)
+    _ = pg.initial_population()
+    oldmaxfit = pg.lineups.fitness.max()
+    tprint(pg.lineups.loc[pg.lineups.fitness == oldmaxfit, :].to_string())
+    new_lineups = pg.breed()
+    maxfit = new_lineups.fitness.max()
+    tprint(new_lineups.loc[new_lineups.fitness == maxfit, :].to_string())
+    assert len(new_lineups) == len(pg.lineups)
+
+    all_lineups = pd.concat([pg.lineups, new_lineups])
+    pg.lineups = all_lineups.loc[all_lineups.fitness > all_lineups.fitness.median(), :]
+    new_lineups = pg.breed()
+    maxfit = new_lineups.fitness.max()
+    tprint(new_lineups.loc[new_lineups.fitness == maxfit, :].to_string())
+    assert len(new_lineups) == len(pg.lineups)
+
+
+def test_optimize_past(results, tprint):
+    tprint(results)
+    assert not results.empty()
