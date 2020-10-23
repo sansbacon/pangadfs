@@ -22,14 +22,14 @@ class PanGaDFS:
 
     DEFAULT_FLEX = ('RB', 'WR', 'TE')
     SALARY_CAP = 50000
-    SALARY_FLOOR = 45000
+    SALARY_FLOOR = 47500
     MIN_SCORE = 120
 
     def __init__(self, 
                  player_pool, 
                  flex=DEFAULT_FLEX, 
                  initial_size=500, 
-                 mutation_rate=.05,
+                 mutation_rate=.15,
                  projcol='proj',
                  roulette_method='proj'):
         """Creates instance
@@ -100,7 +100,7 @@ class PanGaDFS:
             self._weighted_wrs = self._weighted_pos('WR')
         return self._weighted_wrs
 
-    def _breed_two(self, lu, max_attempts=10):
+    def _breed_two(self, lu, mother_or_father=None, max_attempts=10):
         """Breeds two lineups
            Tries max_attempts, if fail then breed with new lineup
         """
@@ -108,7 +108,8 @@ class PanGaDFS:
         while attempts < max_attempts:
             # randomly assign father/mother for each lineup slot
             # this should be a 9-item array of zeros and ones            
-            mother_or_father = np.random.binomial(1, .5, size=len(lu[0]))
+            if not mother_or_father:
+                mother_or_father = np.random.binomial(1, .5, size=len(lu[0]))
 
             # picks mother or father for each position
             # have to use index slice to get dataframe instead of series
@@ -157,11 +158,8 @@ class PanGaDFS:
             new_lineup = self._breed_two((lu1, lu2))
 
             # apply mutation according to mutation rate
-            if random.random() <= self.mutation_rate:
-                new_lineup = self._breed_two((new_lineup, self.create_lineup()))
-
             # add lineup
-            new_lineups.append(new_lineup)
+            new_lineups.append(self.mutate(new_lineup))
 
         return pd.concat(new_lineups)
 
@@ -215,6 +213,14 @@ class PanGaDFS:
                  sal >= self.SALARY_FLOOR) and
                  proj >= self.MIN_SCORE and
                  len(lineup.player_id.unique()) == 9)
+
+    def mutate(self, lineup):
+        """Mutates lineup"""
+        mf = np.random.binomial(1, .05, size=9)
+        if 1 in mf:
+            lu = (lineup, self.create_lineup())
+            return self._breed_two(lu, mother_or_father=mf)
+        return lineup
 
     def roulette_wheel(self, projcol='proj'):
         """Creates weighted player pool by projection

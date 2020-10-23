@@ -4,6 +4,7 @@ import logging
 import random
 import pandas as pd
 import pytest
+import time
 
 from pangadfs import *
 
@@ -82,5 +83,27 @@ def test_breed_generations(players, tprint):
 
 
 def test_optimize_past(results, tprint):
-    tprint(results)
-    assert not results.empty()
+    tic = time.perf_counter()
+    pg = PanGaDFS(player_pool=results, 
+                  initial_size=1000,
+                  projcol='score')
+    _ = pg.initial_population()
+    oldmaxfit = pg.lineups.fitness.max()
+    tprint(pg.lineups.loc[pg.lineups.fitness == oldmaxfit, :].to_string())
+
+    pg.lineups = pg.lineups.loc[pg.lineups.fitness > pg.lineups.fitness.median(), :]
+
+    new_lineups = pg.breed()
+    maxfit = new_lineups.fitness.max()
+    tprint(new_lineups.loc[new_lineups.fitness == maxfit, :].to_string())
+    assert len(new_lineups) == len(pg.lineups)
+
+    all_lineups = pd.concat([pg.lineups, new_lineups])
+    pg.lineups = all_lineups.loc[all_lineups.fitness > all_lineups.fitness.median(), :]
+
+    new_lineups = pg.breed()
+    maxfit = new_lineups.fitness.max()
+    tprint(new_lineups.loc[new_lineups.fitness == maxfit, :].to_string())
+    assert len(new_lineups) == len(pg.lineups)
+    toc = time.perf_counter()
+    print(f"Test time {toc - tic:0.4f} seconds")
