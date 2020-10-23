@@ -1,10 +1,9 @@
 from typing import List
-from pydfs_lineup_optimizer.settings import BaseSettings, LineupPosition
-from pydfs_lineup_optimizer.constants import Sport, Site
-from pydfs_lineup_optimizer.sites.sites_registry import SitesRegistry
-from pydfs_lineup_optimizer.lineup_printer import DraftKingTiersLineupPrinter
-from pydfs_lineup_optimizer.sites.draftkings.tiers.importer import DraftKingsTiersCSVImporter
-from pydfs_lineup_optimizer.rules import DraftKingsTiersRule
+from ....settings import BaseSettings, LineupPosition
+from ....constants import Sport, Site
+from ...sites_registry import SitesRegistry
+from ....lineup_printer import DraftKingTiersLineupPrinter
+from ...draftkings.tiers.importer import DraftKingsTiersCSVImporter
 
 
 class DraftKingsTiersSettings(BaseSettings):
@@ -13,20 +12,12 @@ class DraftKingsTiersSettings(BaseSettings):
     min_games = 2
     budget = None
     positions = []  # type: List[LineupPosition]
-    extra_rules = [DraftKingsTiersRule]
+    extra_rules = []
     lineup_printer = DraftKingTiersLineupPrinter
 
 
 @SitesRegistry.register_settings
-class DraftKingsTiersBasketballSettings(DraftKingsTiersSettings):
-    sport = Sport.BASKETBALL
+class DraftKingsTiersFootballSettings(DraftKingsTiersSettings):
+    sport = Sport.FOOTBALL
 
 
-@SitesRegistry.register_settings
-class DraftKingsTiersBaseballSettings(DraftKingsTiersSettings):
-    sport = Sport.BASEBALL
-
-
-@SitesRegistry.register_settings
-class DraftKingsTiersHockeySettings(DraftKingsTiersSettings):
-    sport = Sport.HOCKEY

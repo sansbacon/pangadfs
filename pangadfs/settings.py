@@ -1,5 +1,14 @@
 from typing import Optional, Type, List, Sequence, TYPE_CHECKING
 
+from .lineup_printer import LineupPrinter, BaseLineupPrinter
+from .lineup_exporter import LineupExporter, CSVLineupExporter
+
+
+class LineupPosition:
+    def __init__(self, name: str, positions: Sequence[str]):
+        self.name = name
+        self.positions = positions
+
 
 class BaseSettings:
     site = None  # type: str

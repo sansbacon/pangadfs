@@ -5,6 +5,5 @@ from .tiers.settings import *
 __all__ = [
     "DraftKingsFootballSettings",
     "DraftKingsCaptainModeFootballSettings",
-    "DraftKingsCaptainModeBasketballSettings",
-    "DraftKingsTiersBasketballSettings",
+    "DraftKingsTiersFoottballSettings",
 ]
