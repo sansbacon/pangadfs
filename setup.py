@@ -20,7 +20,14 @@ def run():
         author_email="eric@erictruett.com",
         license="Apache 2.0",
         packages=find_packages(),
-        package_dir={"": PACKAGE_NAME},
+        entry_points={
+          'gadfs.crossover': ['crossover_default = gadfs.default:DefaultCrossover'],
+          'gadfs.mutate': ['mutate_default = gadfs.default:DefaultMutate'],
+          'gadfs.populate': ['populate_default = gadfs.default:DefaultPopulate'],
+          'gadfs.fitness': ['fitness_default = gadfs.default:DefaultFitness'],
+          'gadfs.validate': ['validate_default = gadfs.default:DefaultValidate'],
+          'console_scripts': ['gaopt=app.app:main']
+        },
         zip_safe=False,
     )
 

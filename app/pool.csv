@@ -1,0 +1,201 @@
+id,full_name,team,pos,proj
+1,Patrick Mahomes,KC,QB,25.5
+2,Russell Wilson,SEA,QB,25.3
+3,Davante Adams,GB,WR,23.9
+4,Aaron Rodgers,GB,QB,23.8
+5,Derrick Henry,TEN,RB,22
+6,Tyreek Hill,KC,WR,21.9
+7,Tom Brady,TB,QB,21.9
+8,Deshaun Watson,HOU,QB,21.8
+9,Josh Allen,BUF,QB,21.7
+10,Dalvin Cook,MIN,RB,21.6
+11,Justin Herbert,LAC,QB,21.3
+12,Ryan Tannehill,TEN,QB,21.2
+13,Kyler Murray,ARI,QB,20.8
+14,Lamar Jackson,BAL,QB,20.7
+15,Taysom Hill,NO,QB,20.7
+16,Travis Kelce,KC,TE,19.8
+17,Austin Ekeler,LAC,RB,19.7
+18,Keenan Allen,LAC,WR,18.9
+19,Matt Ryan,ATL,QB,18.8
+20,Jared Goff,LA,QB,18.6
+21,DK Metcalf,SEA,WR,18.6
+22,Aaron Jones,GB,RB,18.5
+23,A.J. Brown,TEN,WR,18.3
+24,Ben Roethlisberger,PIT,QB,18.2
+25,Stefon Diggs,BUF,WR,18.1
+26,James Robinson,JAX,RB,17.8
+27,Derek Carr,LV,QB,17.8
+28,Matthew Stafford,DET,QB,17.7
+29,Philip Rivers,IND,QB,17.7
+30,Calvin Ridley,ATL,WR,17.5
+31,Adam Thielen,MIN,WR,17.4
+32,Michael Thomas,NO,WR,17.3
+33,Tyler Lockett,SEA,WR,17.3
+34,Kirk Cousins,MIN,QB,17.2
+35,Justin Jefferson,MIN,WR,17
+36,Mike Davis,CAR,RB,16.9
+37,Teddy Bridgewater,CAR,QB,16.8
+38,Mitchell Trubisky,CHI,QB,16.8
+39,Julio Jones,ATL,WR,16.6
+40,Robby Anderson,CAR,WR,16.6
+41,Chris Carson,SEA,RB,16.6
+42,Jalen Hurts,PHI,QB,16.5
+43,Tua Tagovailoa,MIA,QB,16.2
+44,Cam Newton,NE,QB,16.2
+45,David Montgomery,CHI,RB,16
+46,Baker Mayfield,CLE,QB,15.9
+47,Cooper Kupp,LA,WR,15.9
+48,DeAndre Hopkins,ARI,WR,15.8
+49,Brandin Cooks,HOU,WR,15.8
+50,Robert Woods,LA,WR,15.8
+51,Nick Mullens,SF,QB,15.7
+52,Andy Dalton,DAL,QB,15.6
+53,Mike Glennon,JAX,QB,15.6
+54,Diontae Johnson,PIT,WR,15.5
+55,Terry McLaurin,WAS,WR,15.5
+56,Darren Waller,LV,TE,15.4
+57,Curtis Samuel,CAR,WR,15.1
+58,Ezekiel Elliott,DAL,RB,15
+59,Deebo Samuel,SF,WR,15
+60,Marquise Brown,BAL,WR,14.9
+61,Allen Robinson II,CHI,WR,14.9
+62,Marvin Jones Jr.,DET,WR,14.9
+63,DeVante Parker,MIA,WR,14.8
+64,Alvin Kamara,NO,RB,14.8
+65,Mike Evans,TB,WR,14.7
+66,Jarvis Landry,CLE,WR,14.6
+67,Ronald Jones II,TB,RB,14.4
+68,Chris Godwin,TB,WR,14.4
+69,Corey Davis,TEN,WR,14.4
+70,Drew Lock,DEN,QB,14.3
+71,Nick Chubb,CLE,RB,14.2
+72,Alex Smith,WAS,QB,14.2
+73,Jonathan Taylor,IND,RB,13.6
+74,DJ Chark Jr.,JAX,WR,13.5
+75,Kenyan Drake,ARI,RB,13.4
+76,Brandon Allen,CIN,QB,13.4
+77,Devontae Booker,LV,RB,13.4
+78,Myles Gaskin,MIA,RB,13.4
+79,Antonio Brown,TB,WR,13.4
+80,Sam Darnold,NYJ,QB,13.3
+81,Chase Claypool,PIT,WR,13.2
+82,J.D. McKissic,WAS,RB,13.1
+83,Jamison Crowder,NYJ,WR,13
+84,JuJu Smith-Schuster,PIT,WR,12.9
+85,Amari Cooper,DAL,WR,12.7
+86,Giovani Bernard,CIN,RB,12.6
+87,Colt McCoy,NYG,QB,12.6
+88,Cole Beasley,BUF,WR,12.4
+89,Brandon Aiyuk,SF,WR,12.4
+90,Keke Coutee,HOU,WR,12.2
+91,Tyler Boyd,CIN,WR,12.1
+92,Breshad Perriman,NYJ,WR,12
+93,Raheem Mostert,SF,RB,12
+94,Tee Higgins,CIN,WR,11.9
+95,T.Y. Hilton,IND,WR,11.9
+96,Jakobi Meyers,NE,WR,11.8
+97,Kareem Hunt,CLE,RB,11.7
+98,Sterling Shepard,NYG,WR,11.7
+99,T.J. Hockenson,DET,TE,11.6
+100,Nelson Agholor,LV,WR,11.6
+101,Wayne Gallman Jr.,NYG,RB,11.6
+102,Evan Engram,NYG,TE,11.6
+103,Michael Gallup,DAL,WR,11.5
+104,Miles Sanders,PHI,RB,11.5
+105,Rashard Higgins,CLE,WR,11.4
+106,CeeDee Lamb,DAL,WR,11.3
+107,Melvin Gordon III,DEN,RB,11.2
+108,Allen Lazard,GB,WR,11.1
+109,James Conner,PIT,RB,11.1
+110,Michael Pittman Jr.,IND,WR,11
+111,J.K. Dobbins,BAL,RB,10.9
+112,Nyheim Hines,IND,RB,10.9
+113,Mike Williams,LAC,WR,10.9
+114,Jerry Jeudy,DEN,WR,10.8
+115,Robert Tonyan,GB,TE,10.7
+116,Sammy Watkins,KC,WR,10.7
+117,Rob Gronkowski,TB,TE,10.7
+118,Clyde Edwards-Helaire,KC,RB,10.5
+119,David Johnson,HOU,RB,10.4
+120,Todd Gurley II,ATL,RB,10.3
+121,Leonard Fournette,TB,RB,10.3
+122,Gabriel Davis,BUF,WR,10.2
+123,Hunter Henry,LAC,TE,10.2
+124,Mike Gesicki,MIA,TE,10.1
+125,Eric Ebron,PIT,TE,10.1
+126,Christian Kirk,ARI,WR,10
+127,Noah Fant,DEN,TE,9.9
+128,Jamaal Williams,GB,RB,9.9
+129,D'Andre Swift,DET,RB,9.7
+130,Latavius Murray,NO,RB,9.7
+131,Tim Patrick,DEN,WR,9.6
+132,Devin Duvernay,BAL,WR,9.5
+133,Anthony Miller,CHI,WR,9.5
+134,Jonnu Smith,TEN,TE,9.5
+135,Devin Singletary,BUF,RB,9.4
+136,Danny Amendola,DET,WR,9.4
+137,Damien Harris,NE,RB,9.4
+138,Darius Slayton,NYG,WR,9.4
+139,James White,NE,RB,9.3
+140,Seahawks,SEA,DST,9.3
+141,Chase Edmonds,ARI,RB,9.2
+142,Hayden Hurst,ATL,TE,9.2
+143,Damiere Byrd,NE,WR,9.1
+144,Saints,NO,DST,9.1
+145,Russell Gage,ATL,WR,9
+146,Dallas Goedert,PHI,TE,9
+147,Logan Thomas,WAS,TE,9
+148,Darnell Mooney,CHI,WR,8.9
+149,Cam Akers,LA,RB,8.9
+150,Zach Ertz,PHI,TE,8.8
+151,Dalton Schultz,DAL,TE,8.7
+152,KJ Hamler,DEN,WR,8.7
+153,Henry Ruggs III,LV,WR,8.7
+154,Hunter Renfrow,LV,WR,8.6
+155,Golden Tate,NYG,WR,8.6
+156,Cowboys,DAL,DST,8.6
+157,Phillip Lindsay,DEN,RB,8.3
+158,Jakeem Grant,MIA,WR,8.3
+159,Peyton Barber,WAS,RB,8.3
+160,Marquez Valdes-Scantling,GB,WR,8.2
+161,Keelan Cole,JAX,WR,8.2
+162,Tyler Higbee,LA,TE,8.2
+163,Kyle Rudolph,MIN,TE,8.2
+164,Larry Fitzgerald,ARI,WR,8.1
+165,Luke Willson,BAL,TE,8.1
+166,Emmanuel Sanders,NO,WR,8.1
+167,Jordan Reed,SF,TE,8
+168,Austin Hooper,CLE,TE,7.9
+169,Zach Pascal,IND,WR,7.9
+170,Ty Johnson,NYJ,RB,7.9
+171,Frank Gore,NYJ,RB,7.9
+172,Duke Johnson,HOU,RB,7.7
+173,Laviska Shenault Jr.,JAX,WR,7.6
+174,Chad Hansen,HOU,WR,7.5
+175,Josh Reynolds,LA,WR,7.5
+176,Cardinals,ARI,DST,7.5
+177,Rams,LA,DST,7.5
+178,49ers,SF,DST,7.5
+179,Zack Moss,BUF,RB,7.4
+180,Jalen Reagor,PHI,WR,7.4
+181,Kendrick Bourne,SF,WR,7.4
+182,Anthony Firkser,TEN,TE,7.4
+183,Panthers,CAR,DST,7.4
+184,Trey Burton,IND,TE,7.3
+185,David Moore,SEA,WR,7.3
+186,Cam Sims,WAS,WR,7.3
+187,Cole Kmet,CHI,TE,7.2
+188,Tyler Eifert,JAX,TE,7.2
+189,Jacob Hollister,SEA,TE,7.1
+190,Brandon Zylstra,CAR,WR,7
+191,Jeff Wilson Jr.,SF,RB,7
+192,Quintez Cephus,DET,WR,6.9
+193,Le'Veon Bell,KC,RB,6.9
+194,Gerald Everett,LA,TE,6.9
+195,Will Dissly,SEA,TE,6.9
+196,Titans,TEN,DST,6.9
+197,Drew Sample,CIN,TE,6.8
+198,N'Keal Harry,NE,WR,6.8
+199,Jared Cook,NO,TE,6.8
+200,Texans,HOU,DST,6.8

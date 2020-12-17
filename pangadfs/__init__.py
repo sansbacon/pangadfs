@@ -1,2 +1,1 @@
-from .pangadfs import *
-from .settings import *
+from .ga import GeneticAlgorithm
