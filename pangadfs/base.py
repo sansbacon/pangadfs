@@ -5,13 +5,6 @@
 
 import abc
 import logging
-from typing import Dict, Tuple
-
-from pandas.core.api import DataFrame
-
-
-Population = Dict[Tuple, Tuple]
-Df = DataFrame
 
 
 class CrossoverBase(metaclass=abc.ABCMeta):
@@ -21,17 +14,8 @@ class CrossoverBase(metaclass=abc.ABCMeta):
         logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
-    def crossover(population: Population, pool: Df):
-        """Implement crossover.
-
-        Args:
-            population (Population): the existing population of teams
-            pool (Df): the entire player pool
-
-        Returns:
-            Population: new population
-
-        """
+    def crossover(self, *args, **kwargs):
+        """Implement crossover."""
 
 
 class FitnessBase(metaclass=abc.ABCMeta):
@@ -41,16 +25,9 @@ class FitnessBase(metaclass=abc.ABCMeta):
         logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
-    def fitness(population: Population):
-        """Implement fitness.
+    def fitness(self, *args, **kwargs):
+        """Implement fitness."""
 
-        Args:
-            population (Population): the existing population of teams
-
-        Returns:
-            float
-
-        """
 
 class MutateBase(metaclass=abc.ABCMeta):
     """Base class for crossover plugins."""
@@ -59,18 +36,8 @@ class MutateBase(metaclass=abc.ABCMeta):
         logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
-    def mutate(population: Population, pool: Df, mutation_rate: float):
-        """Mutates population at given mutation rate.
-
-        Args:
-            population (Population): the existing population of teams
-            pool (Df): the entire player pool
-            mutation_rate (float): between 0 and 1
-
-        Returns:
-            Population: new population
-
-        """
+    def mutate(self, *args, **kwargs):
+        """Mutates population at given mutation rate."""
 
 
 class PopulateBase(metaclass=abc.ABCMeta):
@@ -80,18 +47,30 @@ class PopulateBase(metaclass=abc.ABCMeta):
         logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
-    def populate(pool: Df, initial_size: int, n_chromosomes: int):
-        """Creates initial population from pool.
+    def populate(self, *args, **kwargs):
+        """Creates initial population from pool."""
 
-        Args:
-            pool (Df): the entire player pool
-            initial_size (int): initial size of population
-            n_chromosomes (int): number of chromosomes for individual
 
-        Returns:
-            Population: new population
+class PoolBase(metaclass=abc.ABCMeta):
+    """Base class for pool plugins."""
 
-        """
+    def __init__(self):
+        logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+    @abc.abstractmethod
+    def pool(self, *args, **kwargs):
+        """Implement pool."""
+
+
+class PospoolBase(metaclass=abc.ABCMeta):
+    """Base class for pospool plugins."""
+
+    def __init__(self):
+        logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+    @abc.abstractmethod
+    def pospool(self, *args, **kwargs):
+        """Implement pospool."""
 
 
 class ValidateBase(metaclass=abc.ABCMeta):
@@ -101,14 +80,5 @@ class ValidateBase(metaclass=abc.ABCMeta):
         logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
-    def validate(population: Population):
-        """Implement validate.
-
-        Args:
-            population (Population): the existing population of teams
-
-        Returns:
-            bool
-
-        """
-
+    def validate(self, *args, **kwargs):
+        """Implement validate."""

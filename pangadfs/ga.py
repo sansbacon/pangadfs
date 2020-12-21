@@ -1,40 +1,50 @@
 # gadfs/gadfs/ga.py
 # -*- coding: utf-8 -*-
 # Copyright (C) 2020 Eric Truett
-# Licensed under the MIT License
+# Licensed under the Apache 2.0 License
+
+import logging
 
 
 class GeneticAlgorithm:
 
-    def __init__(self, pool, driver_managers, initial_size=10, team_size=5):
-        self.pool = pool
-        self.initial_size = initial_size
-        self.team_size = team_size
+    def __init__(self, driver_managers):
+        logging.getLogger(__name__).addHandler(logging.NullHandler())
+        self._pool = None
+        self._pospool = None
         self.driver_managers = driver_managers
 
-    def crossover(self, population):
+    def crossover(self, **kwargs):
         mgr = self.driver_managers.get('crossover')
-        return mgr.driver.crossover(population=population, pool=self.pool)
+        return mgr.driver.crossover(**kwargs)
 
-    def fitness(self, population):
+    def fitness(self, **kwargs):
         mgr = self.driver_managers.get('fitness')
-        return mgr.driver.fitness(population=population)
+        return mgr.driver.fitness(**kwargs)
 
-    def mutate(self, population, mutation_rate):
+    def mutate(self, **kwargs):
         mgr = self.driver_managers.get('mutate')
-        return mgr.driver.mutate(population=population, 
-                                 pool=self.pool, 
-                                 mutation_rate=mutation_rate)
+        return mgr.driver.mutate(**kwargs)
 
-    def populate(self):
+    def pool(self, **kwargs):
+        if not self._pool:
+            mgr = self.driver_managers.get('pool')
+            return mgr.driver.pool(**kwargs)           
+        return self._pool
+        
+    def populate(self, **kwargs):
         mgr = self.driver_managers.get('populate')
-        return mgr.driver.populate(pool=self.pool, 
-                                   initial_size=self.initial_size, 
-                                   n_chromosomes=self.team_size)
+        return mgr.driver.populate(**kwargs)
 
-    def validate(self, population):
+    def pospool(self, **kwargs):
+        if not self._pospool:
+            mgr = self.driver_managers.get('pospool')
+            return mgr.driver.pospool(**kwargs)           
+        return self._pool
+        
+    def validate(self, **kwargs):
         mgr = self.driver_managers.get('validate')
-        return mgr.driver.validate(population=population)
+        return mgr.driver.validate(**kwargs)
 
 
 if __name__ == '__main__':
