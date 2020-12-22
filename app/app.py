@@ -7,13 +7,13 @@ import logging
 from pathlib import Path
 import pandas as pd
 
-from settings import dmgrs, ga_settings, site_settings
+from app.settings import dmgrs, ga_settings, site_settings
 from pangadfs import GeneticAlgorithm
 
 
 def main():
 	"""Main script"""
-	logging.basicConfig(level=logging.INFO)
+	logging.basicConfig(level=logging.ERROR)
 
 	# set up GeneticAlgorithm object
 	ga = GeneticAlgorithm(driver_managers=dmgrs)
@@ -34,15 +34,19 @@ def main():
 	oldmax = population_fitness.max()
 
 	# CREATE NEW GENERATIONS
-	for _ in range(ga_settings['n_generations']):
-		population = ga.crossover(population=population, population_fitness=population_fitness)
-		population = ga.validate(population=population, salary_mapping=salary_mapping, salary_cap=site_settings['salary_cap'])
-		population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
-		thismax = population_fitness.max()
-		if thismax > oldmax:
-			oldmax = thismax
-			print(round(thismax, 2))
-
+	for i in range(ga_settings['n_generations']):
+		try:
+			print(f'Starting generation {i}')
+			population = ga.crossover(population=population, population_fitness=population_fitness)
+			population = ga.validate(population=population, salary_mapping=salary_mapping, salary_cap=site_settings['salary_cap'])
+			population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
+			thismax = population_fitness.max()
+			if thismax > oldmax:
+				oldmax = thismax
+				print(round(thismax, 2))
+		except:
+			break
+	print(pool.loc[population[population_fitness.argmax()], :])
 
 
 if __name__ == '__main__':

@@ -30,7 +30,7 @@ dmgrs = {
 
 ga_settings = {
   'n_generations': 20,
-	'population_size': 1000,
+	'population_size': 10000,
 	'points_column': 'proj',
 	'salary_column': 'salary',
 	'csvpth': Path(__file__).parent / 'pool.csv'
