@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
 # pangadfs/tests/test_default.py
-import random
+# -*- coding: utf-8 -*-
+# Copyright (C) 2020 Eric Truett
+# Licensed under the Apache 2.0 License
 
 import numpy as np
 import pandas as pd

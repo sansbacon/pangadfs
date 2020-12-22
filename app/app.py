@@ -7,13 +7,14 @@ import logging
 from pathlib import Path
 import pandas as pd
 
-from app.settings import dmgrs, ga_settings, site_settings
+from settings import dmgrs, ga_settings, site_settings
 from pangadfs import GeneticAlgorithm
 
 
 def main():
 	"""Main script"""
-	logging.basicConfig(level=logging.ERROR)
+	logging.basicConfig(level=logging.INFO)
+	logging.debug({k: str(v.driver) for k, v in dmgrs.items()})
 
 	# set up GeneticAlgorithm object
 	ga = GeneticAlgorithm(driver_managers=dmgrs)
@@ -45,8 +46,9 @@ def main():
 				oldmax = thismax
 				print(round(thismax, 2))
 		except:
-			break
+			continue
 	print(pool.loc[population[population_fitness.argmax()], :])
+	print(f'Lineup score: {oldmax}')
 
 
 if __name__ == '__main__':

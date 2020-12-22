@@ -13,21 +13,6 @@ from stevedore import driver
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-plugin_names = {
-  'crossover': os.getenv("PANGADFS_CROSSOVER_PLUGIN"),
-  'populate': os.getenv("PANGADFS_POPULATE_PLUGIN"),
-  'fitness': os.getenv("PANGADFS_FITNESS_PLUGIN"),
-  'validate': os.getenv("PANGADFS_VALIDATE_PLUGIN"),
-  'mutate': os.getenv("PANGADFS_MUTATE_PLUGIN"),
-  'pool': os.getenv("PANGADFS_POOL_PLUGIN"),
-  'pospool': os.getenv("PANGADFS_POSPOOL_PLUGIN"),
-}
-
-dmgrs = {
-  k: driver.DriverManager(namespace=f'pangadfs.{k}', name=v, invoke_on_load=True)
-  for k, v in plugin_names.items()
-}
-
 ga_settings = {
   'n_generations': 20,
 	'population_size': 10000,
@@ -41,3 +26,10 @@ site_settings = {
 	'posmap': {'QB': 1, 'RB': 2, 'WR': 3, 'TE': 1, 'DST': 1, 'FLEX': 7}
 }
 
+plugins = ('crossover', 'populate', 'fitness', 'validate', 'mutate', 'pool', 'pospool')
+plugin_names = {p: os.getenv(f'PANGADFS_{p.upper()}_PLUGIN', f'{p}_default') for p in plugins}
+
+dmgrs = {
+  k: driver.DriverManager(namespace=f'pangadfs.{k}', name=v, invoke_on_load=True)
+  for k, v in plugin_names.items()
+}

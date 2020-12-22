@@ -1,5 +1,8 @@
-# -*- coding: utf-8 -*-
 # pangadfs/tests/test_base.py
+# -*- coding: utf-8 -*-
+# Copyright (C) 2020 Eric Truett
+# Licensed under the Apache 2.0 License
+
 import pytest
 from pangadfs.base import *
 

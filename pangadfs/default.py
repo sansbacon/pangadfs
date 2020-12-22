@@ -9,7 +9,7 @@ from typing import Dict, Iterable
 import numpy as np
 import pandas as pd
 
-from .base import *
+from pangadfs.base import *
 
 
 class DefaultCrossover(CrossoverBase):
@@ -45,8 +45,6 @@ class DefaultCrossover(CrossoverBase):
             does not recalculate fitness / sort or trim / validate population
 
         """
-        logging.info('using default crossover')      
-
         # split top pctl of population into parents
         if population_fitness is not None:
             fittest = np.argwhere(population_fitness > np.percentile(population_fitness, pctl)).ravel()
@@ -76,7 +74,6 @@ class DefaultMutate(MutateBase):
             np.ndarray of same shape as population
 
         """
-        logging.info('using default mutate')
         mutate = (
             np.random.binomial(n=1, p=mutation_rate, size=population.size)
             .reshape(population.shape)
@@ -93,7 +90,6 @@ class DefaultFitness(FitnessBase):
                 population: np.ndarray, 
                 points_mapping: Dict[int, float]):
         """Assesses population fitness"""
-        logging.info('using default fitness')
         return np.apply_along_axis(lambda x: sum([points_mapping[i] for i in x]), axis=1, arr=population)
 
 
@@ -110,7 +106,6 @@ class DefaultPool(PoolBase):
     @staticmethod
     def pool(csvpth):
         """Creates initial pool"""
-        logging.info('using default pool')
         pool = pd.read_csv(csvpth)
         assert set(pool.columns) == set(['player', 'team', 'pos', 'salary', 'proj'])
         return pool.sort_values(['pos']).reset_index(drop=True)
@@ -203,8 +198,6 @@ class DefaultPopulate(PopulateBase):
             ndarray of size (population_size, sum(posmap.values()))
 
         """
-        logging.info('using default populate')
-
         pos_samples = {
             pos: self.multidimensional_shifting(pospool[pos].index, population_size, n, pospool[pos][probcol])
             for pos, n in posmap.items()
@@ -237,7 +230,6 @@ class DefaultValidate(ValidateBase):
                  salary_mapping: Dict[int, int],
                  salary_cap: int):
         """Ensures valid individuals in population"""
-        logging.info('using default validate')
         popsal = np.apply_along_axis(lambda x: sum([salary_mapping[i] for i in x]), axis=1, arr=population)
 
         # duplicates validation
