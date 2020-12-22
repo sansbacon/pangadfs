@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # tests/test_db.py
+'''
 import logging
 import random
 import pandas as pd
@@ -107,3 +108,4 @@ def test_optimize_past(results, tprint):
     assert len(new_lineups) == len(pg.lineups)
     toc = time.perf_counter()
     print(f"Test time {toc - tic:0.4f} seconds")
+'''

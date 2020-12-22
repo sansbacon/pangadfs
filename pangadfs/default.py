@@ -53,8 +53,8 @@ class DefaultCrossover(CrossoverBase):
             fathers, mothers = np.array_split(population[fittest], 2)
         else:
             fathers, mothers = np.array_split(population, 2)
-        if len(fathers) != len(mothers):
-            mothers = mothers[:-1]
+        if len(fathers) > len(mothers):
+            fathers = fathers[:-1]
       
         # choice is a 9-element array of True and False
         choice = np.random.randint(2, size=fathers.size).reshape(fathers.shape).astype(bool)   
@@ -62,6 +62,7 @@ class DefaultCrossover(CrossoverBase):
                           mothers, 
                           np.where(choice, fathers, mothers), 
                           np.where(choice, mothers, fathers)))
+
        
 class DefaultMutate(MutateBase):
     """Default mutate technique"""
@@ -181,7 +182,8 @@ class DefaultPopulate(PopulateBase):
         random_shifts = np.random.random(replicated_probabilities.shape)
         random_shifts /= random_shifts.sum(axis=1)[:, np.newaxis]
         shifted_probabilities = random_shifts - replicated_probabilities
-        return elements[np.argpartition(shifted_probabilities, sample_size, axis=1)[:, :sample_size]]
+        samples = np.argpartition(shifted_probabilities, sample_size, axis=1)[:, :sample_size]
+        return elements.to_numpy()[samples]
 
     def populate(self, 
                  *, 
