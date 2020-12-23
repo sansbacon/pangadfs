@@ -80,10 +80,10 @@ def site_settings():
     }
 
 
-def test_init(dms, plugin_names):
+def test_init(dms, plugin_names, tprint):
     obj = GeneticAlgorithm(driver_managers=dms)
-    for plugin_name in plugin_names:
-        assert plugin_name in obj.driver_managers
+    for plugin_namespace, plugin_name in plugin_names.items():
+        assert hasattr(obj.driver_managers[plugin_namespace].driver, plugin_namespace)
 
 
 def test_pool(test_directory, ga):
@@ -96,7 +96,7 @@ def test_pool(test_directory, ga):
 def test_pospool(p, pf, ga):
     pospool = ga.pospool(
       pool=p, posfilter=pf, column_mapping={} 
-    )    
+    )
     assert isinstance (pospool, dict)
     key = random.choice(list(pospool.keys()))
     assert isinstance(pospool[key], pd.core.api.DataFrame)
