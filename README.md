@@ -1,2 +1,7 @@
-# pangadfs
-Pandas-based genetic algorithm for NFL dfs
+==============
+ pangadfs
+==============
+
+# Introduction
+
+pangadfs is a pandas-based genetic algorithm for NFL dfs
