@@ -10,6 +10,6 @@ plugins:
 nav:
     - Home: index.md
     - Code Reference:
-        - base: base-reference.md
         - default: default-reference.md
         - ga: ga-reference.md
+        - base: base-reference.md
