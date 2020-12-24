@@ -214,27 +214,34 @@ class DefaultPopulate(PopulateBase):
         return np.column_stack((pop, flex))
 
 
-class DefaultValidate(ValidateBase):
-    """Default validate technique"""
-
-    @staticmethod
-    def bincount(population: np.ndarray, valid_size: int= 9):
-        n = population.max()+1
-        population_off = population + (np.arange(population.shape[0])[:,None]) * n
-        M = population.shape[0]*n
-        return np.where((np.bincount(population_off.ravel(), minlength=M).reshape(-1,n)!=0).sum(1) == valid_size, True, False)
+class SalaryValidate(ValidateBase):
+    """Default salary validate technique"""
 
     def validate(self, 
                  *, 
                  population: np.ndarray, 
                  salary_mapping: Dict[int, int],
-                 salary_cap: int):
+                 salary_cap: int,
+                 **kwargs):
         """Ensures valid individuals in population"""
         popsal = np.apply_along_axis(lambda x: sum([salary_mapping[i] for i in x]), axis=1, arr=population)
+        return population[popsal <= salary_cap]
 
-        # duplicates validation
-        population = population[popsal <= salary_cap]
-        return population[self.bincount(population)]
+
+class DuplicatesValidate(ValidateBase):
+    """Default duplicates validate technique"""
+
+    def validate(self, 
+                 *, 
+                 population: np.ndarray, 
+                 valid_size: int = 9,
+                 **kwargs):
+        """Ensures valid individuals in population"""
+        n = population.max() + 1
+        population_off = population + (np.arange(population.shape[0])[:,None]) * n
+        M = population.shape[0]*n
+        idx = np.where((np.bincount(population_off.ravel(), minlength=M).reshape(-1,n)!=0).sum(1) == valid_size, True, False)
+        return population[idx]
 
 
 if __name__ == '__main__':

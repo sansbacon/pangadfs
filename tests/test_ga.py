@@ -10,22 +10,30 @@ import random
 import numpy as np
 import pandas as pd
 import pytest
-from stevedore import driver
+from stevedore import driver, named
 
 from pangadfs import GeneticAlgorithm
 
 
 @pytest.fixture
-def dms(plugin_names):
+def dms():
+    plugins = ('crossover', 'populate', 'fitness', 'mutate', 'pool', 'pospool')
+    mapping = {p: os.getenv(f'PANGADFS_{p.upper()}_PLUGIN', f'{p}_default') for p in plugins}
     return {
         k: driver.DriverManager(namespace=f'pangadfs.{k}', name=v, invoke_on_load=True)
-        for k, v in plugin_names.items()
+        for k, v in mapping.items()
     }
 
 
 @pytest.fixture
-def ga(dms):
-    return GeneticAlgorithm(driver_managers=dms)
+def ems():
+    names = ['validate_salary', 'validate_duplicates']
+    return {'validate': named.NamedExtensionManager(namespace=f'pangadfs.validate', names=names, invoke_on_load=True, name_order=True)}
+
+
+@pytest.fixture
+def ga(dms, ems):
+    return GeneticAlgorithm(driver_managers=dms, extension_managers=ems)
 
 
 @pytest.fixture
@@ -50,12 +58,6 @@ def pf():
 
 
 @pytest.fixture
-def plugin_names():
-    plugins = ('crossover', 'populate', 'fitness', 'validate', 'mutate', 'pool', 'pospool')
-    return {p: os.getenv(f'PANGADFS_{p.upper()}_PLUGIN', f'{p}_default') for p in plugins}
-
-
-@pytest.fixture
 def pm():
 	return {'QB': 1, 'RB': 2, 'WR': 3, 'TE': 1, 'DST': 1, 'FLEX': 7}
 
@@ -63,7 +65,7 @@ def pm():
 @pytest.fixture
 def pop(pp, pm, ga):
     return ga.populate(
-      pospool=pp, posmap=pm, population_size=100
+      pospool=pp, posmap=pm, population_size=1000
     )
 
 
@@ -80,10 +82,15 @@ def site_settings():
     }
 
 
-def test_init(dms, plugin_names, tprint):
-    obj = GeneticAlgorithm(driver_managers=dms)
-    for plugin_namespace, plugin_name in plugin_names.items():
-        assert hasattr(obj.driver_managers[plugin_namespace].driver, plugin_namespace)
+def test_init(dms, ems, tprint):
+    obj = GeneticAlgorithm(driver_managers=dms, extension_managers=ems)
+    assert obj is not None
+    obj = GeneticAlgorithm(driver_managers=dms, extension_managers=None)
+    assert obj is not None
+    obj = GeneticAlgorithm(driver_managers=None, extension_managers=ems)
+    assert obj is not None
+    with pytest.raises(ValueError):
+        obj = GeneticAlgorithm(driver_managers=None, extension_managers=None)
 
 
 def test_pool(test_directory, ga):
@@ -103,7 +110,7 @@ def test_pospool(p, pf, ga):
 
 
 def test_populate(pp, pm, ga):
-    size = 100
+    size = 1000
     population = ga.populate(
       pospool=pp, posmap=pm, population_size=size
     )

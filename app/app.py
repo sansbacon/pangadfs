@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 import pandas as pd
 
-from settings import dmgrs, ga_settings, site_settings
+from settings import dmgrs, emgrs, ga_settings, site_settings
 from pangadfs import GeneticAlgorithm
 
 
@@ -17,7 +17,7 @@ def main():
 	logging.debug({k: str(v.driver) for k, v in dmgrs.items()})
 
 	# set up GeneticAlgorithm object
-	ga = GeneticAlgorithm(driver_managers=dmgrs)
+	ga = GeneticAlgorithm(driver_managers=dmgrs, extension_managers=emgrs)
 	pool = ga.pool(csvpth=ga_settings['csvpth'])
 	posfilter = {'QB': 12, 'RB': 8, 'WR': 6, 'TE': 5, 'DST': 4, 'FLEX': 6}
 	pospool = ga.pospool(pool=pool, posfilter=posfilter, column_mapping={})

@@ -25,7 +25,8 @@ def run():
           'pangadfs.mutate': ['mutate_default = pangadfs.default:DefaultMutate'],
           'pangadfs.populate': ['populate_default = pangadfs.default:DefaultPopulate'],
           'pangadfs.fitness': ['fitness_default = pangadfs.default:DefaultFitness'],
-          'pangadfs.validate': ['validate_default = pangadfs.default:DefaultValidate'],
+          'pangadfs.validate': ['validate_salary = pangadfs.default:SalaryValidate',
+                                'validate_duplicates = pangadfs.default:DuplicatesValidate'],
           'pangadfs.pool': ['pool_default = pangadfs.default:DefaultPool'],
           'pangadfs.pospool': ['pospool_default = pangadfs.default:DefaultPospool'],
           'console_scripts': ['pangaopt=app.app:main']

@@ -3,6 +3,8 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
 
+import random
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -94,12 +96,19 @@ def test_mutate_default(pop):
     assert not np.array_equal(pop, mpop)
 
 
-def test_validate_default(p, pop):
+def test_validate_salary(p, pop):
     smap = dict(zip(p.index, p['salary']))
     scap = 50000
-    vpop = DefaultValidate().validate(
+    vpop = SalaryValidate().validate(
       population=pop, salary_mapping=smap, salary_cap=scap
     )
+    assert isinstance(vpop, np.ndarray)
+    assert vpop.size > 0
+    assert len(pop) >= len(vpop)
+
+
+def test_validate_duplicate(p, pop):
+    vpop = DuplicatesValidate().validate(population=pop)
     assert isinstance(vpop, np.ndarray)
     assert vpop.size > 0
     assert len(pop) >= len(vpop)
