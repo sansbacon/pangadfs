@@ -3,7 +3,6 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
 
-import logging
 from typing import Dict, Iterable
 
 import numpy as np
@@ -13,25 +12,13 @@ from pangadfs.base import *
 
 
 class DefaultCrossover(CrossoverBase):
-    """Default crossover technique
-    
-    The default approach is to take the top {pctl} of the population and divide in half.
-    Then generate boolean array of the same size as each individual (e.g. 9 for DK)
-    Use the boolean to generate two children
-    Child 1 takes from father on True and mother on False
-    Child 2 takes from mother on True and father on False
-
-    Example:
-        c = DefaultCrossover()
-        newpop = c.crossover(population=oldpop, population_fitness=oldpopfit, pctl=50)
-
-    """
+    """Default crossover technique"""
 
     def crossover(self, 
                   *, 
                   population: np.ndarray, 
-                  population_fitness: np.ndarray=None,
-                  pctl: int=50):
+                  population_fitness: np.ndarray = None,
+                  pctl: int = 50):
         """Crosses over individuals in population
         
         Args:
@@ -94,14 +81,7 @@ class DefaultFitness(FitnessBase):
 
 
 class DefaultPool(PoolBase):
-    """Default pool technique
-    
-        Reads in a csv file with the following columns:
-        player, team, pos, salary, proj
-
-        Sorts players by position so indexes are sequential by position
-
-    """
+    """Default pool technique"""
 
     @staticmethod
     def pool(csvpth):
@@ -112,14 +92,7 @@ class DefaultPool(PoolBase):
 
 
 class DefaultPospool(PospoolBase):
-    """Default pospool technique
-    
-       Creates prob (probabilities) column for weighted random sampling.
-       Uses points per dollar to nudge initial selection to best options.
-       While there are good reasons not to optimize solely on ppd, it is 
-       effective at creating a good initial population.    
-
-    """
+    """Default pospool technique"""
 
     @staticmethod
     def pospool(*,
