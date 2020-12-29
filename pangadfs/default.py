@@ -11,10 +11,9 @@ import pandas as pd
 from pangadfs.base import *
 
 
-class DefaultCrossover(CrossoverBase):
-    """Default crossover technique"""
+class CrossoverDefault(CrossoverBase):
 
-    def crossover(self, 
+    def crossover(self,
                   *, 
                   population: np.ndarray, 
                   population_fitness: np.ndarray = None,
@@ -49,13 +48,14 @@ class DefaultCrossover(CrossoverBase):
                           np.where(choice, mothers, fathers)))
 
        
-class DefaultMutate(MutateBase):
-    """Default mutate technique"""
+class MutateDefault(MutateBase):
 
-    def mutate(self, *, population: np.ndarray, mutation_rate: float=.05):
+    def mutate(self, *, population: np.ndarray, mutation_rate: float = .05):
         """Mutates individuals in population
         
         Args:
+            population (np.ndarray): the population to mutate. Shape is n_individuals x n_chromosomes.
+            mutation_rate (float): decimal value from 0 to 1, default .05
 
         Returns:
             np.ndarray of same shape as population
@@ -69,33 +69,38 @@ class DefaultMutate(MutateBase):
         return np.where(mutate, np.random.permutation(population), population)      
 
 
-class DefaultFitness(FitnessBase):
-    """Default fitness technique."""
+class FitnessDefault(FitnessBase):
 
-    def fitness(self, 
+    def fitness(self,
                 *, 
                 population: np.ndarray, 
                 points_mapping: Dict[int, float]):
-        """Assesses population fitness"""
+        """Assesses population fitness using supplied mapping
+        
+        Args:
+            population (np.ndarray): the population to assess fitness
+            points_mapping (Dict[int, float]): the array index: projected points
+
+        Returns:
+            np.ndarray: 1D array of float
+
+        """
         return np.apply_along_axis(lambda x: sum([points_mapping[i] for i in x]), axis=1, arr=population)
 
 
-class DefaultPool(PoolBase):
-    """Default pool technique"""
+class PoolDefault(PoolBase):
 
-    @staticmethod
-    def pool(csvpth):
+    def pool(self, csvpth):
         """Creates initial pool"""
         pool = pd.read_csv(csvpth)
         assert set(pool.columns) == set(['player', 'team', 'pos', 'salary', 'proj'])
         return pool.sort_values(['pos']).reset_index(drop=True)
 
 
-class DefaultPospool(PospoolBase):
-    """Default pospool technique"""
+class PospoolDefault(PospoolBase):
 
-    @staticmethod
-    def pospool(*,
+    def pospool(self,
+                *,
                 pool: pd.DataFrame,
                 posfilter: Dict[str, int], 
                 column_mapping: Dict[str, str],
@@ -117,23 +122,20 @@ class DefaultPospool(PospoolBase):
         poscol = column_mapping.get('position', 'pos')
         pointscol = column_mapping.get('points', 'proj')
         salcol = column_mapping.get('salary', 'salary')
-        wanted = column_mapping.values()
         for position, thresh in posfilter.items():
             if position == 'FLEX':
-                tmp = pool.loc[(pool[poscol].isin(flex_positions)) & (pool[pointscol] >= thresh), wanted]      
+                tmp = pool.loc[(pool[poscol].isin(flex_positions)) & (pool[pointscol] >= thresh), [pointscol, salcol]]      
             else:           
-                tmp = pool.loc[(pool[poscol] == position) & (pool[pointscol] >= thresh), wanted]
-            prob_ = (pool[pointscol] / pool[salcol]) * 1000
+                tmp = pool.loc[(pool[poscol] == position) & (pool[pointscol] >= thresh), [pointscol, salcol]]
+            prob_ = (tmp[pointscol] / tmp[salcol]) * 1000
             prob_ = prob_ / prob_.sum()
             d[position] = tmp.assign(prob=prob_)
         return d
 
 
-class DefaultPopulate(PopulateBase):
-    """Default populate technique"""
+class PopulateDefault(PopulateBase):
 
-    @staticmethod
-    def multidimensional_shifting(elements, num_samples, sample_size, probs):
+    def multidimensional_shifting(self, elements, num_samples, sample_size, probs):
         """Based on https://medium.com/ibm-watson/incredibly-fast-random-sampling-in-python-baf154bd836a
         
         Args:
@@ -153,7 +155,7 @@ class DefaultPopulate(PopulateBase):
         samples = np.argpartition(shifted_probabilities, sample_size, axis=1)[:, :sample_size]
         return elements.to_numpy()[samples]
 
-    def populate(self, 
+    def populate(self,
                  *, 
                  pospool, 
                  posmap: Dict[str, int], 
@@ -179,18 +181,16 @@ class DefaultPopulate(PopulateBase):
         # concatenate positions into single row
         pop = np.concatenate([pos_samples[pos] for pos in posmap if pos != 'FLEX'], axis=1)
 
-        # add flex and filter out duplicates
-        flex = np.array([np.random.choice(np.setdiff1d(pos_samples['FLEX'][i], pop[i])) 
-                         for i in range(population_size)])
-        
-        # return aggregated array
-        return np.column_stack((pop, flex))
+        # find non-duplicate FLEX and aggregate with other positions
+        # https://stackoverflow.com/questions/65473095
+        # https://stackoverflow.com/questions/54155844/
+        dups = (pos_samples['FLEX'][..., None] == pop[:, None, :]).any(-1)
+        return np.column_stack((pop, pos_samples['FLEX'][np.invert(dups).cumsum(axis=1).cumsum(axis=1) == 1]))
 
 
 class SalaryValidate(ValidateBase):
-    """Default salary validate technique"""
 
-    def validate(self, 
+    def validate(self,
                  *, 
                  population: np.ndarray, 
                  salary_mapping: Dict[int, int],
@@ -202,9 +202,8 @@ class SalaryValidate(ValidateBase):
 
 
 class DuplicatesValidate(ValidateBase):
-    """Default duplicates validate technique"""
 
-    def validate(self, 
+    def validate(self,
                  *, 
                  population: np.ndarray, 
                  valid_size: int = 9,
@@ -219,4 +218,3 @@ class DuplicatesValidate(ValidateBase):
 
 if __name__ == '__main__':
     pass
-

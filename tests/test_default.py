@@ -9,14 +9,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pangadfs import GeneticAlgorithm
 from pangadfs.default import *
 
 
 @pytest.fixture
 def p(test_directory):
     csvpth = test_directory / 'test_pool.csv'
-    return DefaultPool().pool(csvpth)
+    return PoolDefault().pool(csvpth)
 
 
 @pytest.fixture
@@ -32,27 +31,27 @@ def pm():
 @pytest.fixture
 def pp(p, pf):
     cm = {}
-    return DefaultPospool().pospool(
+    return PospoolDefault().pospool(
       pool=p, posfilter=pf, column_mapping=cm 
     )    
 
 
 @pytest.fixture
 def pop(pp, pm):
-    return DefaultPopulate().populate(
+    return PopulateDefault().populate(
       pospool=pp, posmap=pm, population_size=100
     )
 
 
 def test_pool_default(test_directory):
     csvpth = test_directory / 'test_pool.csv'
-    pool = DefaultPool().pool(csvpth)    
+    pool = PoolDefault().pool(csvpth)    
     assert isinstance(pool, pd.core.api.DataFrame)
     assert not pool.empty
 
 
-def test_pospool_default(p, pf):
-    pospool = DefaultPospool().pospool(
+def test_pospool_default(p, pf, tprint):
+    pospool = PospoolDefault().pospool(
       pool=p, posfilter=pf, column_mapping={} 
     )    
     assert isinstance (pospool, dict)
@@ -61,8 +60,8 @@ def test_pospool_default(p, pf):
 
 
 def test_populate_default(pp, pm, tprint):
-    size = 2
-    population = DefaultPopulate().populate(
+    size = 5
+    population = PopulateDefault().populate(
       pospool=pp, posmap=pm, population_size=size
     )
     assert isinstance(population, np.ndarray)
@@ -71,7 +70,7 @@ def test_populate_default(pp, pm, tprint):
 
 def test_fitness_default(p, pop, tprint):
     points_mapping = dict(zip(p.index, p['proj']))
-    fitness = DefaultFitness().fitness(
+    fitness = FitnessDefault().fitness(
       population=pop, points_mapping=points_mapping
     )
     assert isinstance(fitness, np.ndarray)
@@ -80,10 +79,10 @@ def test_fitness_default(p, pop, tprint):
 
 def test_crossover_default(p, pop):
     points_mapping = dict(zip(p.index, p['proj']))
-    popfit = DefaultFitness().fitness(
+    popfit = FitnessDefault().fitness(
       population=pop, points_mapping=points_mapping
     )
-    newpop = DefaultCrossover().crossover(
+    newpop = CrossoverDefault().crossover(
       population=pop, population_fitness=popfit 
     )
     assert isinstance(newpop, np.ndarray)
@@ -91,7 +90,7 @@ def test_crossover_default(p, pop):
 
 
 def test_mutate_default(pop):
-    mpop = DefaultMutate().mutate(population=pop)
+    mpop = MutateDefault().mutate(population=pop)
     assert pop.shape == mpop.shape
     assert not np.array_equal(pop, mpop)
 

@@ -18,7 +18,7 @@ from pangadfs import GeneticAlgorithm
 @pytest.fixture
 def dms():
     plugins = ('crossover', 'populate', 'fitness', 'mutate', 'pool', 'pospool')
-    mapping = {p: os.getenv(f'PANGADFS_{p.upper()}_PLUGIN', f'{p}_default') for p in plugins}
+    mapping = {p: f'{p}_default' for p in plugins}
     return {
         k: driver.DriverManager(namespace=f'pangadfs.{k}', name=v, invoke_on_load=True)
         for k, v in mapping.items()
@@ -28,7 +28,8 @@ def dms():
 @pytest.fixture
 def ems():
     names = ['validate_salary', 'validate_duplicates']
-    return {'validate': named.NamedExtensionManager(namespace=f'pangadfs.validate', names=names, invoke_on_load=True, name_order=True)}
+    mgr = named.NamedExtensionManager(namespace=f'pangadfs.validate', names=names, invoke_on_load=True, name_order=True)
+    return {'validate': mgr}
 
 
 @pytest.fixture
