@@ -50,7 +50,7 @@ class CrossoverDefault(CrossoverBase):
        
 class MutateDefault(MutateBase):
 
-    def mutate(self, *, population: np.ndarray, mutation_rate: float = .10):
+    def mutate(self, *, population: np.ndarray, mutation_rate: float = .05):
         """Mutates individuals in population
         
         Args:
@@ -66,8 +66,7 @@ class MutateDefault(MutateBase):
             .reshape(population.shape)
             .astype(bool)
         )
-
-        return np.concatenate((population, np.where(mutate, np.random.permutation(population), population)))
+        return np.where(mutate, np.random.permutation(population), population)
 
 
 class FitnessDefault(FitnessBase):
@@ -224,13 +223,11 @@ class DuplicatesValidate(ValidateBase):
     def validate(self,
                  *, 
                  population: np.ndarray, 
-                 valid_size: int = 9,
                  **kwargs):
         """Removes duplicate individuals from population
         
             Args:
                 population (np.ndarray): the population to validate
-                valid_size (int): number of lineup slots (9 for DK)
 
             Returns:
                 np.ndarray of same width as population, likely has less rows
@@ -238,11 +235,9 @@ class DuplicatesValidate(ValidateBase):
         """
         # the first part eliminates individuals with duplicate genes
         # the second part eliminates duplicate individuals
-        n = population.max() + 1
-        population_off = population + (np.arange(population.shape[0])[:, None]) * n
-        M = population.shape[0] * n
-        idx = np.where((np.bincount(population_off.ravel(), minlength=M).reshape(-1, n) != 0).sum(1) == valid_size, True, False)
-        return unique(np.sort(population[idx], axis=1))
+        population_sorted = np.sort(population, axis=-1)
+        population = population[(population_sorted[...,1:] != population_sorted[..., :-1]).all(-1)]
+        return unique(np.sort(population, axis=1))
 
 
 if __name__ == '__main__':
