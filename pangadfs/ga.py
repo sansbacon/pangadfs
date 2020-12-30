@@ -9,7 +9,7 @@ from stevedore import driver
 
 
 class GeneticAlgorithm:
-    """"This class handles the coordination of all of the stevedore plugin managers."""
+    """Handles coordination of stevedore plugin managers."""
 
     PLUGIN_NAMESPACES = (
        'pool', 'pospool', 'populate', 'crossover', 
@@ -82,14 +82,17 @@ class GeneticAlgorithm:
     def crossover(self, **kwargs):
         """Crossover operation to generate new population
 
-           Keyword Args:
-               agg (bool): if True, then aggregate multiple crossovers, otherwise is sequential.
-               population (np.ndarray): the population to cross over, is 2D array
-               population_fitness (np.ndarray): the fitness of the population to crossover, is 1D array
-               pctl (int): the percentile fitness (1-99) to use in crossover, default 50 
+        Args:
+            None
+            
+        Keyword Args:
+            agg (bool): if True, then aggregate multiple crossovers, otherwise is sequential.
+            population (np.ndarray): the population to cross over, is 2D array
+            population_fitness (np.ndarray): the fitness of the population to crossover, is 1D array
+            pctl (int): the percentile fitness (1-99) to use in crossover, default 50 
 
-            Returns:
-                np.ndarray
+        Returns:
+            np.ndarray
 
         """
         # if there is a driver, then use it and run once

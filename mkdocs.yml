@@ -10,6 +10,10 @@ plugins:
 
 nav:
     - Home: index.md
+    - About: about.md
+    - Plugin Namespaces: plugin-namespaces.md
+    - Default Plugins: default-plugins.md
+    - Building Apps with pangadfs: building-apps.md
     - Code Reference:
         - default: default-reference.md
         - ga: ga-reference.md

@@ -1,4 +1,3 @@
-# Introduction
+# About pangadfs
 
 pangadfs is a pandas-based genetic algorithm for NFL daily fantasy optimization. It uses the [stevedore plugin system](https://docs.openstack.org/stevedore/latest/ "Stevedore plugins") to allow applications to customize one or more of the internal components. As recommended by [the stevedore documentation](https://docs.openstack.org/stevedore/latest/user/tutorial/creating_plugins.html#a-plugin-base-class "Stevedore documentation"), the [base module](base-reference.md) includes base classes to define each pluggable component. The [default module](default-reference.md) is the default implementation of each plugin, which provides a fully-functional implementation of a genetic algorithm.
-
