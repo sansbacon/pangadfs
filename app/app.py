@@ -51,10 +51,13 @@ def main():
 		else:
 			print(f'Starting generation {i}')
 			population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
+
 			population = ga.crossover(
 				population=population, 
 				population_fitness=population_fitness
 			)
+
+			population = ga.mutate(population=population, mutation_rate=.1)
 
 			population = ga.validate(
 				population=population, 

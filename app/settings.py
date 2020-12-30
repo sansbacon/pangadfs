@@ -3,7 +3,6 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
 
-import os
 from pathlib import Path
 
 from stevedore import driver, named
