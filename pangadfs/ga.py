@@ -3,7 +3,6 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
 
-from typing import Dict, List, Tuple
 import logging
 import numpy as np
 from stevedore import driver
@@ -17,7 +16,10 @@ class GeneticAlgorithm:
        'fitness', 'mutate', 'validate'
     )
 
-    def __init__(self, ctx: dict, driver_managers: dict = None, extension_managers: dict = None):
+    def __init__(self, 
+                 ctx: dict, 
+                 driver_managers: dict = None, 
+                 extension_managers: dict = None):
         """Creates GeneticAlgorithm instance
 
         Args:
@@ -159,16 +161,16 @@ class GeneticAlgorithm:
                 continue
         return population
 
-    def optimize(self,
-                 **kwargs):
+    def optimize(self, **kwargs):
         """Optimizes lineup
         
-            Keyword Args:
-                verbose (bool): controls logging of optimizer progress
+        Keyword Args:
+            verbose (bool): controls logging of optimizer progress
                 
-            Returns:
-                Tuple[np.ndarray, np.ndarray]                
+        Returns:
+            Tuple[np.ndarray, np.ndarray]                
         
+        TODO: update to reflect current app structure
         """
         pool = self.pool(csvpth=self.ctx['ga_settings']['csvpth'])
         posfilter = self.ctx['ga_settings']['posfilter']
@@ -314,13 +316,9 @@ class GeneticAlgorithm:
         if mgr := self.driver_managers.get('validate'):
             return mgr.driver.validate(**kwargs)
         population = kwargs['population']
-        logging.debug(f'population is {population}')
         for ext in self.extension_managers['validate'].extensions:
-            logging.debug(f'applying {ext}')
             kwargs['population'] = population
-            logging.debug('population is {population}')
             population = ext.obj.validate(**kwargs)
-            logging.debug('population is {population}')
         return population
 
 

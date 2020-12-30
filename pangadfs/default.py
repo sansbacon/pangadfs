@@ -7,6 +7,7 @@ from typing import Dict, Iterable
 
 import numpy as np
 import pandas as pd
+from numpy_indexed import unique
 
 from pangadfs.base import *
 
@@ -49,7 +50,7 @@ class CrossoverDefault(CrossoverBase):
        
 class MutateDefault(MutateBase):
 
-    def mutate(self, *, population: np.ndarray, mutation_rate: float = .05):
+    def mutate(self, *, population: np.ndarray, mutation_rate: float = .10):
         """Mutates individuals in population
         
         Args:
@@ -65,7 +66,8 @@ class MutateDefault(MutateBase):
             .reshape(population.shape)
             .astype(bool)
         )
-        return np.where(mutate, np.random.permutation(population), population)      
+
+        return np.concatenate((population, np.where(mutate, np.random.permutation(population), population)))
 
 
 class FitnessDefault(FitnessBase):
@@ -90,9 +92,18 @@ class FitnessDefault(FitnessBase):
 class PoolDefault(PoolBase):
 
     def pool(self, csvpth):
-        """Creates initial pool"""
+        """Creates initial pool
+        
+        Args:
+            csvpth (Path): path for csv file
+
+        Returns:
+            DataFrame with columns:
+             player, team, pos, salary, proj
+
+        """
         pool = pd.read_csv(csvpth)
-        assert set(pool.columns) == set(['player', 'team', 'pos', 'salary', 'proj'])
+        assert set(['player', 'team', 'pos', 'salary', 'proj']).issubset(pool.columns)
         return pool.sort_values(['pos']).reset_index(drop=True)
 
 
@@ -195,7 +206,15 @@ class SalaryValidate(ValidateBase):
                  salary_mapping: Dict[int, int],
                  salary_cap: int,
                  **kwargs):
-        """Ensures valid individuals in population"""
+        """Ensures valid individuals in population
+        
+            Args:
+                population (np.ndarray): the population to validate
+
+            Returns:
+                np.ndarray of same width as population, likely has less rows
+
+        """
         popsal = np.apply_along_axis(lambda x: sum([salary_mapping[i] for i in x]), axis=1, arr=population)
         return population[popsal <= salary_cap]
 
@@ -207,12 +226,23 @@ class DuplicatesValidate(ValidateBase):
                  population: np.ndarray, 
                  valid_size: int = 9,
                  **kwargs):
-        """Ensures valid individuals in population"""
+        """Removes duplicate individuals from population
+        
+            Args:
+                population (np.ndarray): the population to validate
+                valid_size (int): number of lineup slots (9 for DK)
+
+            Returns:
+                np.ndarray of same width as population, likely has less rows
+
+        """
+        # the first part eliminates individuals with duplicate genes
+        # the second part eliminates duplicate individuals
         n = population.max() + 1
-        population_off = population + (np.arange(population.shape[0])[:,None]) * n
-        M = population.shape[0]*n
-        idx = np.where((np.bincount(population_off.ravel(), minlength=M).reshape(-1,n)!=0).sum(1) == valid_size, True, False)
-        return population[idx]
+        population_off = population + (np.arange(population.shape[0])[:, None]) * n
+        M = population.shape[0] * n
+        idx = np.where((np.bincount(population_off.ravel(), minlength=M).reshape(-1, n) != 0).sum(1) == valid_size, True, False)
+        return unique(np.sort(population[idx], axis=1))
 
 
 if __name__ == '__main__':

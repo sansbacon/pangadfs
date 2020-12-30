@@ -32,7 +32,11 @@ def main():
 	salary_mapping = dict(zip(pool.index, pool[ctx['ga_settings']['salary_column']]))
 	
 	# CREATE NEW GENERATIONS
+	stop_criteria = ctx['ga_settings']['stop_criteria']
+	n_unimproved = 0
 	for i in range(ctx['ga_settings']['n_generations'] + 1):
+		if n_unimproved == stop_criteria:
+		    break
 		if i == 0:
 			# create initial population
 			population = ga.populate(
@@ -51,6 +55,7 @@ def main():
 		else:
 			print(f'Starting generation {i}')
 			population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
+			oldmax = population_fitness.max()
 
 			population = ga.crossover(
 				population=population, 
@@ -70,6 +75,12 @@ def main():
 			print(f'Lineup score: {population_fitness[idx]}')
 			pop_len = pop_size if len(population) > pop_size else len(population)
 			population = population[np.argpartition(population_fitness, -pop_len, axis=0)][-pop_len:]
+
+			if population_fitness.max() > oldmax:
+				oldmax = population_fitness.max()
+				n_unimproved = 0
+			else:
+				n_unimproved += 1
 
 	# BEST LINEUP
 	print('\n------BEST LINEUP------\n')
