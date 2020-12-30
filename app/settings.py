@@ -11,10 +11,11 @@ from stevedore import driver, named
 ctx = {
   'ga_settings': {
     'n_generations': 20,
-    'population_size': 20000,
+    'population_size': 5000,
     'points_column': 'proj',
     'salary_column': 'salary',
-    'csvpth': Path(__file__).parent / 'pool.csv'
+    'position_column': 'pos',
+    'csvpth': Path(__file__).parent / 'pool2.csv'
   },
 
   'site_settings': {

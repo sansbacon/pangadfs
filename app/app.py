@@ -5,6 +5,8 @@
 
 import logging
 from pathlib import Path
+
+import numpy as np
 import pandas as pd
 
 from settings import ctx, dmgrs, emgrs
@@ -18,6 +20,7 @@ def main():
 
 	# set up GeneticAlgorithm object
 	ga = GeneticAlgorithm(ctx=ctx, driver_managers=dmgrs, extension_managers=emgrs)
+	pop_size = ctx['ga_settings']['population_size']
 
 	pool = ga.pool(csvpth=ctx['ga_settings']['csvpth'])
 	posfilter = {'QB': 12, 'RB': 8, 'WR': 6, 'TE': 5, 'DST': 4, 'FLEX': 6}
@@ -28,54 +31,50 @@ def main():
 	points_mapping = dict(zip(pool.index, pool[ctx['ga_settings']['points_column']]))
 	salary_mapping = dict(zip(pool.index, pool[ctx['ga_settings']['salary_column']]))
 	
-	# create initial population
-	population = ga.populate(
-		pospool=pospool, 
-	    posmap=ctx['site_settings']['posmap'], 
-		population_size=ctx['ga_settings']['population_size']
-	)
-
-	# apply validators
-	population = ga.validate(
-		population=population, 
-		salary_mapping=salary_mapping, 
-		salary_cap=ctx['site_settings']['salary_cap']
-	)
-	
-	# calculate current maximum
-	population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
-	oldmax = population_fitness.max()
-	print(pool.loc[population[population_fitness.argmax()], :])
-	print(oldmax)
-
 	# CREATE NEW GENERATIONS
-	for i in range(ctx['ga_settings']['n_generations']):
-		try:
-			print(f'Starting generation {i}')
-			population = ga.crossover(
-				population=population, 
-				population_fitness=population_fitness
+	for i in range(ctx['ga_settings']['n_generations'] + 1):
+		if i == 0:
+			# create initial population
+			population = ga.populate(
+				pospool=pospool, 
+				posmap=ctx['site_settings']['posmap'], 
+				population_size=pop_size
 			)
-			
+
+			# apply validators
 			population = ga.validate(
 				population=population, 
 				salary_mapping=salary_mapping, 
 				salary_cap=ctx['site_settings']['salary_cap']
 			)
-			
+
+		else:
+			print(f'Starting generation {i}')
 			population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
-			thismax = population_fitness.max()
-			if thismax > oldmax:
-				oldmax = thismax
-				print(round(thismax, 2))
-		except:
-			continue
+			population = ga.crossover(
+				population=population, 
+				population_fitness=population_fitness
+			)
+
+			population = ga.validate(
+				population=population, 
+				salary_mapping=salary_mapping, 
+				salary_cap=ctx['site_settings']['salary_cap']
+			)
+
+			population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
+			idx = population_fitness.argmax()
+			print(f'Lineup score: {population_fitness[idx]}')
+			pop_len = pop_size if len(population) > pop_size else len(population)
+			population = population[np.argpartition(population_fitness, -pop_len, axis=0)][-pop_len:]
 
 	# BEST LINEUP
 	print('\n------BEST LINEUP------\n')
-	print(pool.loc[population[population_fitness.argmax()], :])
-	print(f'Lineup score: {oldmax}')
-	
+	population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
+	idx = population_fitness.argmax()
+	print(pool.loc[population[idx], :])
+	print(f'Lineup score: {population_fitness[idx]}')
+
 	
 if __name__ == '__main__':
 	main()

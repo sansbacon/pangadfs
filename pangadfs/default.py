@@ -42,8 +42,7 @@ class CrossoverDefault(CrossoverBase):
       
         # choice is a 9-element array of True and False
         choice = np.random.randint(2, size=fathers.size).reshape(fathers.shape).astype(bool)   
-        return np.vstack((fathers, 
-                          mothers, 
+        return np.vstack((population, 
                           np.where(choice, fathers, mothers), 
                           np.where(choice, mothers, fathers)))
 
