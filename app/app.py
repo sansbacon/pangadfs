@@ -1,4 +1,4 @@
-# pangadfs-captain/app/app.py
+# pangadfs/app/app.py
 # -*- coding: utf-8 -*-
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
@@ -8,86 +8,42 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from stevedore import driver, named
 
-from settings import ctx, dmgrs, emgrs
 from pangadfs import GeneticAlgorithm
 
 
 def main():
-	"""Main script"""
+	"""Example application using pangadfs"""
 	logging.basicConfig(level=logging.INFO)
-	logging.debug({k: str(v.driver) for k, v in dmgrs.items()})
+
+	ctx = {
+		'ga_settings': {
+			'n_generations': 20,
+			'population_size': 5000,
+			'stop_criteria': 5,
+			'points_column': 'proj',
+			'salary_column': 'salary',
+			'position_column': 'pos',
+			'csvpth': Path(__file__).parent / 'pool.csv'
+		},
+
+		'site_settings': {
+			'salary_cap': 50000,
+			'posmap': {'DST': 1, 'QB': 1, 'RB': 2, 'WR': 3, 'TE': 1, 'FLEX': 7},
+			'lineup_size': 9,
+			'posthresh': {'QB': 14, 'RB': 8, 'WR': 8, 'TE': 6, 'DST': 4, 'FLEX': 8}
+		}
+	}
+
+	plugins = ('crossover', 'populate', 'fitness', 'mutate', 'pool', 'pospool')
+	dmgrs = {p: driver.DriverManager(namespace=f'pangadfs.{p}', name=f'{p}_default', invoke_on_load=True) for p in plugins}
+	names = ['validate_salary', 'validate_duplicates']
+	emgrs = {'validate': named.NamedExtensionManager(namespace='pangadfs.validate', names=names, invoke_on_load=True, name_order=True)}
 
 	# set up GeneticAlgorithm object
 	ga = GeneticAlgorithm(ctx=ctx, driver_managers=dmgrs, extension_managers=emgrs)
-	pop_size = ctx['ga_settings']['population_size']
-
-	pool = ga.pool(csvpth=ctx['ga_settings']['csvpth'])
-	posfilter = {'QB': 12, 'RB': 8, 'WR': 6, 'TE': 5, 'DST': 4, 'FLEX': 6}
-	pospool = ga.pospool(pool=pool, posfilter=posfilter, column_mapping={})
-
-	# create dict of index and stat value
-	# this will allow easy lookup later on
-	points_mapping = dict(zip(pool.index, pool[ctx['ga_settings']['points_column']]))
-	salary_mapping = dict(zip(pool.index, pool[ctx['ga_settings']['salary_column']]))
-	
-	# CREATE NEW GENERATIONS
-	stop_criteria = ctx['ga_settings']['stop_criteria']
-	n_unimproved = 0
-	for i in range(ctx['ga_settings']['n_generations'] + 1):
-		if n_unimproved == stop_criteria:
-		    break
-		if i == 0:
-			# create initial population
-			population = ga.populate(
-				pospool=pospool, 
-				posmap=ctx['site_settings']['posmap'], 
-				population_size=pop_size
-			)
-
-			# apply validators
-			population = ga.validate(
-				population=population, 
-				salary_mapping=salary_mapping, 
-				salary_cap=ctx['site_settings']['salary_cap']
-			)
-
-		else:
-			print(f'Starting generation {i}')
-			population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
-			oldmax = population_fitness.max()
-
-			population = ga.crossover(
-				population=population, 
-				population_fitness=population_fitness
-			)
-
-			population = ga.mutate(population=population, mutation_rate=.1)
-
-			population = ga.validate(
-				population=population, 
-				salary_mapping=salary_mapping, 
-				salary_cap=ctx['site_settings']['salary_cap']
-			)
-
-			population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
-			idx = population_fitness.argmax()
-			print(f'Lineup score: {population_fitness[idx]}')
-			pop_len = pop_size if len(population) > pop_size else len(population)
-			population = population[np.argpartition(population_fitness, -pop_len, axis=0)][-pop_len:]
-
-			if population_fitness.max() > oldmax:
-				oldmax = population_fitness.max()
-				n_unimproved = 0
-			else:
-				n_unimproved += 1
-
-	# BEST LINEUP
-	print('\n------BEST LINEUP------\n')
-	population_fitness = ga.fitness(population=population, points_mapping=points_mapping)
-	idx = population_fitness.argmax()
-	print(pool.loc[population[idx], :])
-	print(f'Lineup score: {population_fitness[idx]}')
+	ga.optimize(verbose=True)
 
 	
 if __name__ == '__main__':

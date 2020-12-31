@@ -4,7 +4,11 @@
 # Licensed under the Apache 2.0 License
 
 import logging
+from pathlib import Path
+from typing import Dict, Iterable
+
 import numpy as np
+import pandas as pd
 from stevedore import driver
 
 
@@ -28,7 +32,7 @@ class GeneticAlgorithm:
             extension_managers (dict): key is namespace, value is NamedExtensionManager
 
         Returns:
-            GeneticAlgorithm
+            GeneticAlgorithm: the GA instance
 
         """
         logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -61,7 +65,7 @@ class GeneticAlgorithm:
             None
             
         Returns:
-            List[str]
+            List[str]: the error messages
 
         """
         errors = []
@@ -79,31 +83,44 @@ class GeneticAlgorithm:
                     errors.append(f'site_settings missing {k}')
         return errors
 
-    def crossover(self, **kwargs):
+    def crossover(self,
+                  population: np.ndarray = None,
+                  fitness: np.ndarray = None,
+                  pctl: int = 50,
+                  agg: bool = None,
+                  **kwargs):
         """Crossover operation to generate new population
 
         Args:
-            None
-            
-        Keyword Args:
-            agg (bool): if True, then aggregate multiple crossovers, otherwise is sequential.
             population (np.ndarray): the population to cross over, is 2D array
-            population_fitness (np.ndarray): the fitness of the population to crossover, is 1D array
+            fitness (np.ndarray): the fitness of the population to crossover, is 1D array
             pctl (int): the percentile fitness (1-99) to use in crossover, default 50 
+            agg (bool): if True, then aggregate multiple crossovers, otherwise is sequential.          
+            **kwargs: Keyword arguments for plugins (other than default)
 
         Returns:
-            np.ndarray
+            np.ndarray: the crossed-over population
 
         """
+        # combine keyword arguments with **kwargs
+        if population is not None:
+            kwargs['population'] = population
+        if fitness is not None:
+            kwargs['fitness'] = fitness
+        if pctl is not None:
+            kwargs['pctl'] = pctl
+        if agg:
+            kwargs['agg'] = agg
+
         # if there is a driver, then use it and run once
         if mgr := self.driver_managers.get('crossover'):
             return mgr.driver.crossover(**kwargs)
 
-        # if agg=True, then aggregate mutated populations
+        # if agg=True, then aggregate crossed over populations
         if kwargs.get('agg'):
             pops = []
             population = kwargs['population']
-            for ext in self.extension_managers['mutate'].extensions:
+            for ext in self.extension_managers['crossover'].extensions:
                 try:
                     kwargs['population'] = population
                     population = ext.obj.mutate(**kwargs)
@@ -122,39 +139,64 @@ class GeneticAlgorithm:
                 continue
         return population
 
-    def fitness(self, **kwargs):
+    def fitness(self, 
+                population: np.ndarray = None, 
+                points_mapping: Dict[int, float] = None, 
+                **kwargs):
         """Measures fitness of population
 
-           Keyword Args:
-               population (np.ndarray): the population to cross over, is 2D array
-               points_mapping (Dict[int, float]): the fitness of the population to crossover, is 1D array
-    
-            Returns:
-                np.ndarray - 1D array of float
+        Args:
+            population (np.ndarray): the population to cross over, is 2D array
+            points_mapping (Dict[int, float]): the fitness of the population to crossover, is 1D array
+            **kwargs: Keyword arguments for plugins (other than default)
+
+        Returns:
+            np.ndarray: population fitness as 1D array of float
 
         """
+        # combine keyword arguments with **kwargs
+        if population is not None:
+            kwargs['population'] = population
+        if points_mapping is not None:
+            kwargs['points_mapping'] = points_mapping
 
+        # if there is a driver, then use it and run once
         if mgr := self.driver_managers.get('fitness'):
             return mgr.driver.fitness(**kwargs)
+
+        # otherwise, return fitness for first valid plugin
         for ext in self.extension_managers['fitness'].extensions:
             try:
                 return ext.obj.fitness(**kwargs)
             except:
                 continue
 
-    def mutate(self, **kwargs):
-        """Mutates population
+    def mutate(self, 
+               population: np.ndarray = None,
+               mutation_rate: float = None,
+               **kwargs):
+        """Mutates population at frequency of mutation_rate
 
-            Keyword Args:
-                population (np.ndarray): the population to mutate. Shape is n_individuals x n_chromosomes.
-                mutation_rate (float): decimal value from 0 to 1, default .05
+        Args:
+            population (np.ndarray): the population to mutate. Shape is n_individuals x n_chromosomes.
+            mutation_rate (float): decimal value from 0 to 1, default .05
+            **kwargs: Keyword arguments for plugins (other than default)
 
-            Returns:
-                np.ndarray of same shape and dtype as population
+        Returns:
+            np.ndarray: same shape and dtype as population
 
         """
+        # combine keyword arguments with **kwargs
+        if population is not None:
+            kwargs['population'] = population
+        if mutation_rate is not None:
+            kwargs['mutation_rate'] = mutation_rate
+
+        # if there is a driver, then use it and run once
         if mgr := self.driver_managers.get('mutate'):
             return mgr.driver.mutate(**kwargs)
+
+        # otherwise, mutate with first valid plugin
         population = kwargs['population']
         for ext in self.extension_managers['mutate'].extensions:
             try:
@@ -164,81 +206,125 @@ class GeneticAlgorithm:
                 continue
         return population
 
-    def optimize(self, **kwargs):
+    def optimize(self, verbose: bool = False, **kwargs):
         """Optimizes lineup
         
-        Keyword Args:
+        Args:
             verbose (bool): controls logging of optimizer progress
-                
-        Returns:
-            Tuple[np.ndarray, np.ndarray]                
+            **kwargs: Keyword arguments for plugins (other than default)
         
-        TODO: update to reflect current app structure
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: population and population fitness arrays                
+        
         """
+        pop_size = self.ctx['ga_settings']['population_size']
         pool = self.pool(csvpth=self.ctx['ga_settings']['csvpth'])
-        posfilter = self.ctx['ga_settings']['posfilter']
-        pospool = self.pospool(
-            pool=pool, 
-            posfilter=posfilter, 
-            column_mapping=self.ctx['ga_settings'].get('column_mapping', {})
-        )
+        cmap = {'points': self.ctx['ga_settings']['points_column'],
+			    'position': self.ctx['ga_settings']['position_column'],
+			    'salary': self.ctx['ga_settings']['salary_column']}
+        posfilter = self.ctx['site_settings']['posthresh']
+        pospool = self.pospool(pool=pool, posfilter=posfilter, column_mapping=cmap)
 
         # create dict of index and stat value
         # this will allow easy lookup later on
-        points_mapping = dict(zip(pool.index, pool[self.ctx['ga_settings']['points_column']]))
-        salary_mapping = dict(zip(pool.index, pool[self.ctx['ga_settings']['salary_column']]))
+        cmap = {'points': self.ctx['ga_settings']['points_column'],
+                'salary': self.ctx['ga_settings']['salary_column']}
+        points_mapping = dict(zip(pool.index, pool[cmap['points']]))
+        salary_mapping = dict(zip(pool.index, pool[cmap['salary']]))
         
-        # create initial population
-        # choose 7 FLEX so always have unique value (6 required from 2 RB, 3 WR, 1 TE)
-        population = self.populate(
-          pospool=pospool, 
-          posmap=self.ctx['site_settings']['posmap'], 
-          population_size=self.ctx['ga_settings']['population_size']
-        )
-        
-        population = self.validate(
-          population=population, 
-          salary_mapping=salary_mapping, 
-          salary_cap=self.ctx['site_settings']['salary_cap']
-        )
-        
-        population_fitness = self.fitness(population=population, points_mapping=points_mapping)
-        oldmax = population_fitness.max()
-
         # CREATE NEW GENERATIONS
-        for i in range(self.ctx['ga_settings']['n_generations']):
-            if kwargs.get('verbose'):
-                logging.info(f'Starting generation {i}')
-            population = self.crossover(
-              population=population, 
-              population_fitness=population_fitness
-            )
-            
-            population = self.validate(
-              population=population, 
-              salary_mapping=salary_mapping, 
-              salary_cap=self.ctx['site_settings']['salary_cap']
-            )
-            
-            population_fitness = self.fitness(population=population, points_mapping=points_mapping)
-            thismax = population_fitness.max()
-            if thismax > oldmax:
-                oldmax = thismax
-                if kwargs.get('verbose'):
-                    logging.info(pool.loc[population[population_fitness.argmax()], :])
-                    logging.info(f'Lineup score: {oldmax}')
-        return population, population_fitness      
+        n_unimproved = 0
+        population = None
+        for i in range(self.ctx['ga_settings']['n_generations'] + 1):
+            if n_unimproved == self.ctx['ga_settings']['stop_criteria']:
+                break
+            if i == 0:
+                # create initial population
+                population = self.populate(
+                    pospool=pospool, 
+                    posmap=self.ctx['site_settings']['posmap'], 
+                    population_size=pop_size
+                )
+
+                # apply validators
+                population = self.validate(
+                    population=population, 
+                    salary_mapping=salary_mapping, 
+                    salary_cap=self.ctx['site_settings']['salary_cap']
+                )
+
+            else:
+                population_fitness = self.fitness(
+                    population=population, 
+                    points_mapping=points_mapping
+                )
+                
+                oldmax = population_fitness.max()
+
+                if verbose:
+                    logging.info(f'Starting generation {i}')
+                    logging.info(f'Current lineup score {oldmax}')
+
+                population = self.crossover(
+                    population=population, 
+                    population_fitness=population_fitness
+                )
+
+                population = self.mutate(
+                    population=population, 
+                    mutation_rate=.1
+                )
+
+                population = self.validate(
+                    population=population, 
+                    salary_mapping=salary_mapping, 
+                    salary_cap=self.ctx['site_settings']['salary_cap']
+                )
+
+                population_fitness = self.fitness(
+                    population=population, 
+                    points_mapping=points_mapping
+                )
+
+                pop_len = pop_size if len(population) > pop_size else len(population)
+                
+                # argpartition produces an unsorted rearrangement
+                # use negative parameter and slice to get top n values
+                # this ensures population does not get too large from concatenation
+                population = population[np.argpartition(population_fitness, -pop_len, axis=0)][-pop_len:]
+                newmax = population_fitness.max()
+
+                if newmax > oldmax:
+                    logging.info(f'Lineup improved to {newmax}')
+                    oldmax = newmax
+                    n_unimproved = 0
+                else:
+                    n_unimproved += 1
+                    logging.info(f'Lineup unimproved {n_unimproved} times')
+
+        population_fitness = self.fitness(population=population, points_mapping=points_mapping)
+
+        if verbose:
+            idx = population_fitness.argmax()
+            print(pool.loc[population[idx], :])
+            print(f'Lineup score: {population_fitness[idx]}')
+
+        return population, population_fitness
  
-    def pool(self, **kwargs):
+    def pool(self, csvpth: Path = None, **kwargs):
         """Creates pool of players.
 
-            Keyword Args:
-                csvpth (Path): the path of the datafile
+        Args:
+            csvpth (Path): the path of the datafile
+            **kwargs: Keyword arguments for plugins (other than default)
 
-            Returns:
-                pd.DataFrame
+        Returns:
+            pd.DataFrame: initial pool of players
         
         """
+        if csvpth is not None:
+            kwargs['csvpth'] = csvpth
+
         if mgr := self.driver_managers.get('pool'):
             return mgr.driver.pool(**kwargs)   
         for ext in self.extension_managers['pool'].extensions:
@@ -247,20 +333,39 @@ class GeneticAlgorithm:
             except:
                 logging.error(f'Could not load {ext}')
 
-    def populate(self, **kwargs):
+    def populate(self, 
+                 pospool: Dict[str, pd.DataFrame] = None,
+                 posmap: Dict[str, int] = None,
+                 population_size: int = None,
+                 probcol: str = None,
+                 agg: bool = None,
+                 **kwargs):
         """Creates initial population of specified size
         
-            Keyword Args:
-               pospool (Dict[str, pd.DataFrame]): pool segmented by position
-               posmap (Dict[str, int]): positions & accompanying roster slots
-               population_size (int): number of individuals to create
-               probcol (str): the dataframe column with probabilities
-               agg (bool): if True, then aggregate multiple crossovers, otherwise is sequential.
+        Args:
+            pospool (Dict[str, pd.DataFrame]): pool segmented by position
+            posmap (Dict[str, int]): positions & accompanying roster slots
+            population_size (int): number of individuals to create
+            probcol (str): the dataframe column with probabilities
+            agg (bool): if True, then aggregate multiple crossovers, otherwise is sequential.
+            **kwargs: Keyword arguments for plugins (other than default)
 
-            Returns:
-                np.ndarray
+        Returns:
+            np.ndarray: the population
 
         """
+        # combine keyword arguments with **kwargs
+        if pospool is not None:
+            kwargs['pospool'] = pospool
+        if posmap is not None:
+            kwargs['posmap'] = posmap
+        if population_size is not None:
+            kwargs['population_size'] = population_size
+        if probcol is not None:
+            kwargs['probcol'] = probcol
+        if agg:
+            kwargs['agg'] = agg
+
         # if there is a driver, then use it and run once
         if mgr := self.driver_managers.get('populate'):
             return mgr.driver.populate(**kwargs)
@@ -282,19 +387,35 @@ class GeneticAlgorithm:
             except:
                 continue
 
-    def pospool(self, **kwargs):
+    def pospool(self, 
+                pool: pd.DataFrame = None,
+                posfilter: Dict[str, int] = None,
+                column_mapping: Dict[str, str] = None,
+                flex_positions: Iterable[str] = None,
+                **kwargs):
         """Divides pool into positional buckets
         
-            Keyword Args:   
-                pool (pd.DataFrame):
-                posfilter (Dict[str, int]): position name and points threshold
-                column_mapping (Dict[str, str]): column names for player, position, salary, projection
-                flex_positions (Iterable[str]): e.g. (WR, RB, TE)
-    
-            Returns:
-                Dict[str, pd.DataFrame] where keys == posfilter.keys
+        Args:   
+            pool (pd.DataFrame):
+            posfilter (Dict[str, int]): position name and points threshold
+            column_mapping (Dict[str, str]): column names for player, position, salary, projection
+            flex_positions (Iterable[str]): e.g. (WR, RB, TE)
+            **kwargs: Keyword arguments for plugins (other than default)
+
+        Returns:
+            Dict[str, pd.DataFrame] where keys == posfilter.keys
 
         """
+        # combine keyword arguments with **kwargs
+        if pool is not None:
+            kwargs['pool'] = pool
+        if posfilter is not None:
+            kwargs['posfilter'] = posfilter
+        if column_mapping is not None:
+            kwargs['column_mapping'] = column_mapping
+        if flex_positions is not None:
+            kwargs['flex_positions'] = flex_positions
+
         # if there is a driver, then use it and run once
         # otherwise, run pospool using first valid plugin
         if mgr := self.driver_managers.get('pospool'): 
@@ -305,17 +426,20 @@ class GeneticAlgorithm:
             except:
                 continue
         
-    def validate(self, **kwargs):
+    def validate(self, population: np.ndarray = None, **kwargs):
         """Validate lineup according to validate plugin criteria
         
-            Keyword Args:
-                population (np.ndarray): the population to validate.
+        Args:
+            population (np.ndarray): the population to validate.
+            **kwargs: Keyword arguments for plugins (other than default)
 
-            Returns:
-                np.ndarray of same width and dtype as population.
-                Likely has less rows because excluded invalid lineups.
-
+        Returns:
+            np.ndarray: same width and dtype as population. Likely less rows due to exclusions.
+            
         """
+        if population is not None:
+            kwargs['population'] = population
+
         if mgr := self.driver_managers.get('validate'):
             return mgr.driver.validate(**kwargs)
         population = kwargs['population']
