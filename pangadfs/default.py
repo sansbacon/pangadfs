@@ -61,12 +61,13 @@ class MutateDefault(MutateBase):
             np.ndarray of same shape as population
 
         """
-        mutate = (
-            np.random.binomial(n=1, p=mutation_rate, size=population.size)
-            .reshape(population.shape)
-            .astype(bool)
-        )
-        return np.where(mutate, np.random.permutation(population), population)
+        # mutate is ndarray of same shape of population of dtype bool
+        # if mutation_rate is .05, then 1 out of 20 values should be True
+        # where mutate is true, swap randomly-selected player into population
+        # ensures swap comes from same lineup slot, but does not prevent duplicates from other slots
+        # so lineup positional allocation will stay valid, but duplicates are possible
+        mutate = (np.random.binomial(n=1, p=mutation_rate, size=population.size).reshape(population.shape).astype(bool))
+        return np.where(mutate, population[np.random.choice(len(population), size=len(population), replace=False)], population)
 
 
 class FitnessDefault(FitnessBase):

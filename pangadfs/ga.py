@@ -9,8 +9,38 @@ from typing import Dict, Iterable
 
 import numpy as np
 import pandas as pd
-from stevedore import driver
+from stevedore.driver import DriverManager
+from stevedore.named import NamedExtensionManager
 
+
+def exposure(population: np.ndarray = None) -> Dict[int, int]:
+    """Returns dict of index: count of individuals
+
+    Args:
+        population (np.ndarray): the population
+
+    Returns:
+        Dict[int, int]: key is index, value is count of lineup
+
+    """
+    flat = population.flatten
+    return {id: size for id, size in zip(flat, np.bincount(flat)[flat])}
+
+
+def ownership_penalty(ownership, base=3, boost=2) -> np.ndarray:
+    """Returns 1D array of penalties
+    
+    Args:
+        ownership (np.ndarray): 1D array of ownership
+        base (int): the logarithm base, default 3
+        boost (int): the constant to boost low-owned players
+        
+    Returns:
+        np.ndarray: 1D array of penalties
+        
+    """
+    return 0 - np.log(ownership) / np.log(base) + boost
+    
 
 class GeneticAlgorithm:
     """Handles coordination of stevedore plugin managers."""
@@ -22,8 +52,8 @@ class GeneticAlgorithm:
 
     def __init__(self, 
                  ctx: dict, 
-                 driver_managers: dict = None, 
-                 extension_managers: dict = None):
+                 driver_managers: Dict[str, DriverManager] = None, 
+                 extension_managers: Dict[str, NamedExtensionManager] = None):
         """Creates GeneticAlgorithm instance
 
         Args:
@@ -38,10 +68,8 @@ class GeneticAlgorithm:
         logging.getLogger(__name__).addHandler(logging.NullHandler())
 
         # add driver/extension managers
-        if not driver_managers and not extension_managers:
-            raise ValueError('driver_managers and extension_managers cannot both be none')
-        self.driver_managers = driver_managers
-        self.extension_managers = extension_managers
+        self.driver_managers = driver_managers if driver_managers else {}
+        self.extension_managers = extension_managers if extension_managers else {}
 
         # ensure have necessary parameters
         self.ctx = ctx
@@ -51,12 +79,21 @@ class GeneticAlgorithm:
         # ensure plugin loaded for every namespace
         for ns in self.PLUGIN_NAMESPACES:
             if ns not in driver_managers and ns not in extension_managers:
-                mgr = driver.DriverManager(
-                    namespace=f'pangadfs.{ns}', 
-                    name=f'{ns}_default', 
-                    invoke_on_load=True
-                )
-                self.driver_managers[ns] = mgr
+                if ns == 'validate':
+	                names = ['validate_salary', 'validate_duplicates']
+	                self.emgrs[ns] = NamedExtensionManager(
+                        namespace='pangadfs.validate', 
+                        names=names, 
+                        invoke_on_load=True, 
+                        name_order=True
+                    )
+                else:
+                    mgr = DriverManager(
+                        namespace=f'pangadfs.{ns}', 
+                        name=f'{ns}_default', 
+                        invoke_on_load=True
+                    )
+                    self.driver_managers[ns] = mgr
         
     def _validate_ctx(self):
         """Ensures that ctx dict has all relevant settings
@@ -78,7 +115,7 @@ class GeneticAlgorithm:
         if 'site_settings' not in self.ctx:
             errors.append('Missing site_settings section')
         else:
-            for k in ('salary_cap', 'lineup_size', 'posthresh'):
+            for k in ('salary_cap', 'lineup_size', 'posfilter'):
                 if k not in self.ctx['site_settings']:
                     errors.append(f'site_settings missing {k}')
         return errors
@@ -222,7 +259,7 @@ class GeneticAlgorithm:
         cmap = {'points': self.ctx['ga_settings']['points_column'],
 			    'position': self.ctx['ga_settings']['position_column'],
 			    'salary': self.ctx['ga_settings']['salary_column']}
-        posfilter = self.ctx['site_settings']['posthresh']
+        posfilter = self.ctx['site_settings']['posfilter']
         pospool = self.pospool(pool=pool, posfilter=posfilter, column_mapping=cmap)
 
         # create dict of index and stat value

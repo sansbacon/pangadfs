@@ -1,3 +1,33 @@
 # About pangadfs
 
-pangadfs is a pandas-based genetic algorithm for NFL daily fantasy optimization. It uses the [stevedore plugin system](https://docs.openstack.org/stevedore/latest/ "Stevedore plugins") to allow applications to customize one or more of the internal components. As recommended by [the stevedore documentation](https://docs.openstack.org/stevedore/latest/user/tutorial/creating_plugins.html#a-plugin-base-class "Stevedore documentation"), the [base module](base-reference.md) includes base classes to define each pluggable component. The [default module](default-reference.md) is the default implementation of each plugin, which provides a fully-functional implementation of a genetic algorithm.
+pangadfs is a pandas-based genetic algorithm for NFL daily fantasy optimization. Genetic algorithms maintain a population of candidate solutions, called individuals, for that given problem. These candidate solutions are iteratively evaluated and combined to create a new generation of solutions. Individuals with higher fitness (rated as better at solving the relevant problem) have a greater chance of being selected and passing their qualities to the next generation of candidate solutions This way, as generations go by, candidate solutions get better at solving the problem at hand.
+
+## Optimizing with Genetic Algorithms
+
+Applied to the context of daily fantasy lineups, a genetic algorithm works as follows:
+
+* Pool: load a pool of chromosomes (players) with position, salary, and points (projected if forward looking, actual points if historical).
+
+* Pospool: segment the pool into positions. There will be duplicate genes (players) for multiposition eligibility / flex.
+
+* Populate: create a population of individuals (here lineups) from a pool of genes (here player ids).
+
+    * The initial populations are randomly created using weighted random sampling.
+
+    * Individauls are encoded as an array of integer IDs. For example, a DK NFL individual is np.array([dst_id, qb_id, rb_id, rb_id, wr_id, wr_id, wr_id, te_id, flex_id]).
+
+* Fitness: Assess the fitness of the population (is typically the sum of projected or actual points).
+
+* Crossover: create new individuals by randomly combining elements of the existing fittest individuals.
+
+* Mutate: randomly alter individuals by swapping out chromosomes.
+
+* Validate: filter out invalid individuals (too much salary, duplicate chromosomes, duplicate individuals)
+
+* Repeat for n generations (or until specified stop point, such as no improvement for 5 generations)
+
+
+
+# pangadfs Design Principles
+
+pangadfs is extensible by design and is motivated by difficulties I encountered with other optimizers, which tend to have a monolithic design and don't make it easy to swap out components. pangadfs uses the [stevedore plugin system](https://docs.openstack.org/stevedore/latest/ "Stevedore plugins") to allow applications to customize one or more of the internal components. As recommended by [the stevedore documentation](https://docs.openstack.org/stevedore/latest/user/tutorial/creating_plugins.html#a-plugin-base-class "Stevedore documentation"), the [base module](base-reference.md) includes base classes to define each pluggable component. The [default module](default-reference.md) is the default implementation of each plugin, which provides a fully-functional implementation of a genetic algorithm.

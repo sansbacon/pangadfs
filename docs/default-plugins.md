@@ -1,6 +1,8 @@
 # Default Plugins
 
-This section describes the behavior of the default plugins. The architecture is designed to be flexible, so an application can use all of these plugins, none of them, or a combination of default and other plugins.
+pangadfs is motivated by my experience with other optimziers, which typically have a monolithic design and don't make it easy to swap out components. pangadfs uses the [stevedore plugin system](https://docs.openstack.org/stevedore/latest/ "Stevedore plugins") to allow applications to customize one or more of the internal components. The [default module](default-reference.md) is the default implementation of each plugin, which provides a fully-functional implementation of a genetic algorithm. Other plugins can replace any or all of the defaults.
+
+As recommended by [the stevedore documentation](https://docs.openstack.org/stevedore/latest/user/tutorial/creating_plugins.html#a-plugin-base-class "Stevedore documentation"), the [base module](base-reference.md) includes base classes to define each pluggable component. Plugins may, but are not required to subclass these base classes.
 
 ## DefaultPool
   

@@ -5,12 +5,18 @@
 
 import logging
 from pathlib import Path
+from typing import Dict
 
 import numpy as np
 import pandas as pd
 from stevedore import driver, named
 
 from pangadfs import GeneticAlgorithm
+
+
+def population_exposure(population: np.ndarray = None) -> Dict[int, int]:
+    flat = population.flatten()
+    return {id: size for id, size in zip(flat, np.bincount(flat)[flat])}
 
 
 def main():
@@ -25,14 +31,14 @@ def main():
 			'points_column': 'proj',
 			'salary_column': 'salary',
 			'position_column': 'pos',
-			'csvpth': Path(__file__).parent / 'pool.csv'
+			'csvpth': Path(__file__).parent / 'pool3.csv'
 		},
 
 		'site_settings': {
 			'salary_cap': 50000,
-			'posmap': {'DST': 1, 'QB': 1, 'RB': 2, 'WR': 3, 'TE': 1, 'FLEX': 7},
+			'posmap': {'DST': 1, 'QB': 1, 'TE': 1, 'RB': 2, 'WR': 3, 'FLEX': 7},
 			'lineup_size': 9,
-			'posthresh': {'QB': 14, 'RB': 8, 'WR': 8, 'TE': 6, 'DST': 4, 'FLEX': 8}
+			'posfilter': {'QB': 14, 'RB': 8, 'WR': 8, 'TE': 5, 'DST': 4, 'FLEX': 8}
 		}
 	}
 
@@ -43,8 +49,14 @@ def main():
 
 	# set up GeneticAlgorithm object
 	ga = GeneticAlgorithm(ctx=ctx, driver_managers=dmgrs, extension_managers=emgrs)
-	ga.optimize(verbose=True)
+	population, fitness = ga.optimize(verbose=True)
 
+	# EXPERIMENTING WITH EXPOSURE CAPS
+	fittest_population = population[np.where(fitness > np.percentile(fitness, 97))]
+	exposure = population_exposure(fittest_population)
+	top_exposure = np.argpartition(np.array(list(exposure.values())), -10)[-10:]
+	print([round(i, 3) for i in sorted(top_exposure / len(fittest_population), reverse=True)])            
 	
+
 if __name__ == '__main__':
 	main()
