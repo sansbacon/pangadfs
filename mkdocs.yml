@@ -15,6 +15,15 @@ nav:
     - Default Plugins: default-plugins.md
     - Building Apps with pangadfs: building-apps.md
     - Code Reference:
-        - default: default-reference.md
-        - ga: ga-reference.md
         - base: base-reference.md
+        - crossover: crossover-reference.md
+        - fitness: fitness-reference.md
+        - misc: misc-reference.md
+        - mutate: mutate-reference.md
+        - penalty: penalty-reference.md
+        - pool: pool-reference.md
+        - populate: populate-reference.md
+        - pospool: pospool-reference.md
+        - postprocess: postprocess-reference.md
+        - select: select-reference.md
+        - validate: validate-reference.md

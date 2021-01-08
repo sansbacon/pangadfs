@@ -1,2 +1,0 @@
-# Workflow module
-::: pangadfs.ga

@@ -30,6 +30,6 @@ ctx = {
 
 # set up GeneticAlgorithm object
 ga = GeneticAlgorithm(ctx=ctx)
-ga.optimize(verbose=True)
+population, population_fitness = ga.optimize(verbose=True)
 
 ```
