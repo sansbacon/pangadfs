@@ -5,6 +5,41 @@ import pytest
 
 sys.path.append("../pangadfs")
 
+from pangadfs.pool import *
+from pangadfs.pospool import *
+from pangadfs.populate import *
+
+
+@pytest.fixture
+def p(test_directory):
+    csvpth = test_directory / 'test_pool.csv'
+    return PoolDefault().pool(csvpth=csvpth)
+
+
+@pytest.fixture
+def pf():
+    return {'QB': 12, 'RB': 8, 'WR': 6, 'TE': 5, 'DST': 4, 'FLEX': 6}
+
+
+@pytest.fixture
+def pm():
+	return {'QB': 1, 'RB': 2, 'WR': 3, 'TE': 1, 'DST': 1, 'FLEX': 7}
+
+
+@pytest.fixture
+def pp(p, pf):
+    cm = {}
+    return PospoolDefault().pospool(
+      pool=p, posfilter=pf, column_mapping=cm 
+    )    
+
+
+@pytest.fixture
+def pop(pp, pm):
+    return PopulateDefault().populate(
+      pospool=pp, posmap=pm, population_size=100
+    )
+
 
 @pytest.fixture(scope="session", autouse=True)
 def root_directory(request):

@@ -26,12 +26,12 @@ def main():
 	ctx = {
 		'ga_settings': {
 			'n_generations': 20,
-			'population_size': 5000,
-			'stop_criteria': 5,
+			'population_size': 30000,
+			'stop_criteria': 10,
 			'points_column': 'proj',
 			'salary_column': 'salary',
 			'position_column': 'pos',
-			'csvpth': Path(__file__).parent / 'pool3.csv'
+			'csvpth': Path(__file__).parent / 'pool.csv'
 		},
 
 		'site_settings': {
@@ -42,7 +42,7 @@ def main():
 		}
 	}
 
-	plugins = ('crossover', 'populate', 'fitness', 'mutate', 'pool', 'pospool')
+	plugins = ('crossover', 'populate', 'select', 'fitness', 'mutate', 'pool', 'pospool')
 	dmgrs = {p: driver.DriverManager(namespace=f'pangadfs.{p}', name=f'{p}_default', invoke_on_load=True) for p in plugins}
 	names = ['validate_salary', 'validate_duplicates']
 	emgrs = {'validate': named.NamedExtensionManager(namespace='pangadfs.validate', names=names, invoke_on_load=True, name_order=True)}
@@ -52,10 +52,10 @@ def main():
 	population, fitness = ga.optimize(verbose=True)
 
 	# EXPERIMENTING WITH EXPOSURE CAPS
-	fittest_population = population[np.where(fitness > np.percentile(fitness, 97))]
-	exposure = population_exposure(fittest_population)
-	top_exposure = np.argpartition(np.array(list(exposure.values())), -10)[-10:]
-	print([round(i, 3) for i in sorted(top_exposure / len(fittest_population), reverse=True)])            
+	#fittest_population = population[np.where(fitness > np.percentile(fitness, 97))]
+	#exposure = population_exposure(fittest_population)
+	#top_exposure = np.argpartition(np.array(list(exposure.values())), -10)[-10:]
+	#print([round(i, 3) for i in sorted(top_exposure / len(fittest_population), reverse=True)])            
 	
 
 if __name__ == '__main__':

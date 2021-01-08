@@ -16,8 +16,30 @@ from pangadfs import GeneticAlgorithm
 
 
 @pytest.fixture
+def	ctx(test_directory):
+    return {
+		'ga_settings': {
+			'n_generations': 20,
+			'population_size': 5000,
+			'stop_criteria': 5,
+			'points_column': 'proj',
+			'salary_column': 'salary',
+			'position_column': 'pos',
+			'csvpth': test_directory / 'test_pool.csv'
+		},
+
+		'site_settings': {
+			'salary_cap': 50000,
+			'posmap': {'DST': 1, 'QB': 1, 'TE': 1, 'RB': 2, 'WR': 3, 'FLEX': 7},
+			'lineup_size': 9,
+			'posfilter': {'QB': 14, 'RB': 8, 'WR': 8, 'TE': 5, 'DST': 4, 'FLEX': 8}
+		}
+	}
+
+
+@pytest.fixture
 def dms():
-    plugins = ('crossover', 'populate', 'fitness', 'mutate', 'pool', 'pospool')
+    plugins = [ns for ns in GeneticAlgorithm.PLUGIN_NAMESPACES if ns != 'validate']
     mapping = {p: f'{p}_default' for p in plugins}
     return {
         k: driver.DriverManager(namespace=f'pangadfs.{k}', name=v, invoke_on_load=True)
@@ -33,19 +55,8 @@ def ems():
 
 
 @pytest.fixture
-def ga(dms, ems):
-    return GeneticAlgorithm(driver_managers=dms, extension_managers=ems)
-
-
-@pytest.fixture
-def ga_settings(test_directory):
-    return {
-        'n_generations': 20,
-        'population_size': 5000,
-        'points_column': 'proj',
-        'salary_column': 'salary',
-        'csvpth': test_directory / 'test_pool.csv'
-    }
+def ga(ctx, dms, ems):
+    return GeneticAlgorithm(ctx=ctx, driver_managers=dms, extension_managers=ems)
 
 
 @pytest.fixture
@@ -71,8 +82,8 @@ def pop(pp, pm, ga):
 
 
 @pytest.fixture
-def pp(p, pf, ga):
-    return ga.pospool(pool=p, posfilter=pf, column_mapping={})    
+def pp(p, pf, ga, ctx):
+    return ga.pospool(ctx=ctx, pool=p, posfilter=pf, column_mapping={})    
 
 
 @pytest.fixture
@@ -83,14 +94,14 @@ def site_settings():
     }
 
 
-def test_init(dms, ems, tprint):
-    obj = GeneticAlgorithm(driver_managers=dms, extension_managers=ems)
+def test_init(ctx, dms, ems, tprint):
+    obj = GeneticAlgorithm(ctx=ctx, driver_managers=dms, extension_managers=ems)
     assert obj is not None
-    obj = GeneticAlgorithm(driver_managers=dms, extension_managers=None)
+    obj = GeneticAlgorithm(ctx=ctx, driver_managers=dms, extension_managers=None)
     assert obj is not None
-    obj = GeneticAlgorithm(driver_managers=None, extension_managers=ems)
+    obj = GeneticAlgorithm(ctx=ctx, driver_managers=None, extension_managers=ems)
     assert obj is not None
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         obj = GeneticAlgorithm(driver_managers=None, extension_managers=None)
 
 
@@ -120,22 +131,34 @@ def test_populate(pp, pm, ga):
 
 
 def test_fitness(p, pop, ga):
-    points_mapping = dict(zip(p.index, p['proj']))
+    points = p['proj'].values
     fitness = ga.fitness(
-      population=pop, points_mapping=points_mapping
+      population=pop, points=points
     )
     assert isinstance(fitness, np.ndarray)
     assert fitness.dtype == 'float64'
 
 
+def test_select(p, pop, ga):
+    points = p['proj'].values
+    fitness = ga.fitness(
+      population=pop, points=points
+    )
+
+    selected = ga.select(
+      population=pop,
+      population_fitness=fitness,
+      n=len(pop)
+    )
+
+    assert isinstance(selected, np.ndarray)
+    assert selected.dtype == 'int64'
+
+
 def test_crossover(p, pop, ga):
-    points_mapping = dict(zip(p.index, p['proj']))
-    popfit = ga.fitness(
-      population=pop, points_mapping=points_mapping
-    )
-    newpop = ga.crossover(
-      population=pop, population_fitness=popfit 
-    )
+    points = p['proj'].values
+    popfit = ga.fitness(population=pop, points=points)  
+    newpop = ga.crossover(population=pop, method='uniform')
     assert isinstance(newpop, np.ndarray)
     assert newpop.dtype == 'int64'
 
@@ -147,10 +170,10 @@ def test_mutate(pop, ga):
 
 
 def test_validate(p, pop, ga):
-    smap = dict(zip(p.index, p['salary']))
+    salaries = p['salary'].values
     scap = 50000
     vpop = ga.validate(
-      population=pop, salary_mapping=smap, salary_cap=scap
+      population=pop, salaries=salaries, salary_cap=scap
     )
     assert isinstance(vpop, np.ndarray)
     assert vpop.size > 0

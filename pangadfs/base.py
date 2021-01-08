@@ -73,6 +73,17 @@ class PospoolBase(metaclass=abc.ABCMeta):
         """Implement pospool."""
 
 
+class SelectBase(metaclass=abc.ABCMeta):
+    """Base class for select plugins."""
+
+    def __init__(self):
+        logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+    @abc.abstractmethod
+    def select(self, *args, **kwargs):
+        """Implement select."""
+
+
 class ValidateBase(metaclass=abc.ABCMeta):
     """Base class for validate plugins."""
 

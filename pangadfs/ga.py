@@ -5,7 +5,7 @@
 
 import logging
 from pathlib import Path
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Tuple
 
 import numpy as np
 import pandas as pd
@@ -13,41 +13,12 @@ from stevedore.driver import DriverManager
 from stevedore.named import NamedExtensionManager
 
 
-def exposure(population: np.ndarray = None) -> Dict[int, int]:
-    """Returns dict of index: count of individuals
-
-    Args:
-        population (np.ndarray): the population
-
-    Returns:
-        Dict[int, int]: key is index, value is count of lineup
-
-    """
-    flat = population.flatten
-    return {id: size for id, size in zip(flat, np.bincount(flat)[flat])}
-
-
-def ownership_penalty(ownership, base=3, boost=2) -> np.ndarray:
-    """Returns 1D array of penalties
-    
-    Args:
-        ownership (np.ndarray): 1D array of ownership
-        base (int): the logarithm base, default 3
-        boost (int): the constant to boost low-owned players
-        
-    Returns:
-        np.ndarray: 1D array of penalties
-        
-    """
-    return 0 - np.log(ownership) / np.log(base) + boost
-    
-
 class GeneticAlgorithm:
     """Handles coordination of stevedore plugin managers."""
 
     PLUGIN_NAMESPACES = (
-       'pool', 'pospool', 'populate', 'crossover', 
-       'fitness', 'mutate', 'validate'
+       'pool', 'pospool', 'populate', 'fitness', 
+       'select', 'crossover', 'mutate', 'validate'
     )
 
     def __init__(self, 
@@ -68,8 +39,8 @@ class GeneticAlgorithm:
         logging.getLogger(__name__).addHandler(logging.NullHandler())
 
         # add driver/extension managers
-        self.driver_managers = driver_managers if driver_managers else {}
-        self.extension_managers = extension_managers if extension_managers else {}
+        self.driver_managers = {} if driver_managers is None else driver_managers
+        self.extension_managers = {} if extension_managers is None else extension_managers
 
         # ensure have necessary parameters
         self.ctx = ctx
@@ -78,10 +49,10 @@ class GeneticAlgorithm:
         
         # ensure plugin loaded for every namespace
         for ns in self.PLUGIN_NAMESPACES:
-            if ns not in driver_managers and ns not in extension_managers:
+            if ns not in self.driver_managers and ns not in self.extension_managers:
                 if ns == 'validate':
 	                names = ['validate_salary', 'validate_duplicates']
-	                self.emgrs[ns] = NamedExtensionManager(
+	                self.extension_managers[ns] = NamedExtensionManager(
                         namespace='pangadfs.validate', 
                         names=names, 
                         invoke_on_load=True, 
@@ -95,14 +66,14 @@ class GeneticAlgorithm:
                     )
                     self.driver_managers[ns] = mgr
         
-    def _validate_ctx(self):
+    def _validate_ctx(self) -> Iterable[str]:
         """Ensures that ctx dict has all relevant settings
         
         Args:
             None
             
         Returns:
-            List[str]: the error messages
+            Iterable[str]: the error messages
 
         """
         errors = []
@@ -122,16 +93,12 @@ class GeneticAlgorithm:
 
     def crossover(self,
                   population: np.ndarray = None,
-                  fitness: np.ndarray = None,
-                  pctl: int = 50,
                   agg: bool = None,
-                  **kwargs):
+                  **kwargs) -> np.ndarray:
         """Crossover operation to generate new population
 
         Args:
             population (np.ndarray): the population to cross over, is 2D array
-            fitness (np.ndarray): the fitness of the population to crossover, is 1D array
-            pctl (int): the percentile fitness (1-99) to use in crossover, default 50 
             agg (bool): if True, then aggregate multiple crossovers, otherwise is sequential.          
             **kwargs: Keyword arguments for plugins (other than default)
 
@@ -142,10 +109,6 @@ class GeneticAlgorithm:
         # combine keyword arguments with **kwargs
         if population is not None:
             kwargs['population'] = population
-        if fitness is not None:
-            kwargs['fitness'] = fitness
-        if pctl is not None:
-            kwargs['pctl'] = pctl
         if agg:
             kwargs['agg'] = agg
 
@@ -179,7 +142,7 @@ class GeneticAlgorithm:
     def fitness(self, 
                 population: np.ndarray = None, 
                 points_mapping: Dict[int, float] = None, 
-                **kwargs):
+                **kwargs) -> np.ndarray:
         """Measures fitness of population
 
         Args:
@@ -211,7 +174,7 @@ class GeneticAlgorithm:
     def mutate(self, 
                population: np.ndarray = None,
                mutation_rate: float = None,
-               **kwargs):
+               **kwargs) -> np.ndarray:
         """Mutates population at frequency of mutation_rate
 
         Args:
@@ -243,7 +206,7 @@ class GeneticAlgorithm:
                 continue
         return population
 
-    def optimize(self, verbose: bool = False, **kwargs):
+    def optimize(self, verbose: bool = True, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """Optimizes lineup
         
         Args:
@@ -266,89 +229,93 @@ class GeneticAlgorithm:
         # this will allow easy lookup later on
         cmap = {'points': self.ctx['ga_settings']['points_column'],
                 'salary': self.ctx['ga_settings']['salary_column']}
-        points_mapping = dict(zip(pool.index, pool[cmap['points']]))
-        salary_mapping = dict(zip(pool.index, pool[cmap['salary']]))
+        points = pool[cmap['points']].values
+        salaries = pool[cmap['salary']].values
         
+        # CREATE INITIAL POPULATION
+        initial_population = self.populate(
+            pospool=pospool, 
+            posmap=self.ctx['site_settings']['posmap'], 
+            population_size=pop_size
+        )
+
+        # apply validators
+        initial_population = self.validate(
+            population=initial_population, 
+            salaries=salaries,
+            salary_cap=self.ctx['site_settings']['salary_cap']
+        )
+
+        population_fitness = self.fitness(
+            population=initial_population, 
+            points=points
+        )
+
+        # set overall_max based on initial population
+        omidx = population_fitness.argmax()
+        best_fitness = population_fitness[omidx]
+        best_lineup = initial_population[omidx]
+
         # CREATE NEW GENERATIONS
         n_unimproved = 0
-        population = None
-        for i in range(self.ctx['ga_settings']['n_generations'] + 1):
+        for i in range(1, self.ctx['ga_settings']['n_generations'] + 1):
             if n_unimproved == self.ctx['ga_settings']['stop_criteria']:
                 break
-            if i == 0:
-                # create initial population
-                population = self.populate(
-                    pospool=pospool, 
-                    posmap=self.ctx['site_settings']['posmap'], 
-                    population_size=pop_size
-                )
+            if i == 1:
+                population = initial_population
 
-                # apply validators
-                population = self.validate(
-                    population=population, 
-                    salary_mapping=salary_mapping, 
-                    salary_cap=self.ctx['site_settings']['salary_cap']
-                )
+            if verbose:
+                logging.info(f'Starting generation {i}')
+                logging.info(f'Best lineup score {best_fitness}')
 
+            elite = self.select(
+                population=population, 
+                population_fitness=population_fitness, 
+                n=len(population) // 5,
+                method='fittest'
+            )
+
+            selected = self.select(
+                population=population, 
+                population_fitness=population_fitness, 
+                n=len(population),
+                method='roulette'
+            )
+
+            # uniform crossover
+            crossed_over = self.crossover(population=selected, method='uniform')
+
+            # reduce mutation over generations
+            mutation_rate = max(.05, n_unimproved / 50)
+            mutated = self.mutate(population=crossed_over, mutation_rate=mutation_rate)
+
+            population = self.validate(
+                population=np.vstack((elite, mutated)), 
+                salaries=salaries, 
+                salary_cap=self.ctx['site_settings']['salary_cap']
+            )
+            
+            population_fitness = self.fitness(population=population, points=points)
+            omidx = population_fitness.argmax()
+            generation_max = population_fitness[omidx]
+        
+            if generation_max > best_fitness:
+                logging.info(f'Lineup improved to {generation_max}')
+                best_fitness = generation_max
+                best_lineup = population[omidx]
+                n_unimproved = 0
             else:
-                population_fitness = self.fitness(
-                    population=population, 
-                    points_mapping=points_mapping
-                )
-                
-                oldmax = population_fitness.max()
+                n_unimproved += 1
+                logging.info(f'Lineup unimproved {n_unimproved} times')
 
-                if verbose:
-                    logging.info(f'Starting generation {i}')
-                    logging.info(f'Current lineup score {oldmax}')
-
-                population = self.crossover(
-                    population=population, 
-                    population_fitness=population_fitness
-                )
-
-                population = self.mutate(
-                    population=population, 
-                    mutation_rate=.1
-                )
-
-                population = self.validate(
-                    population=population, 
-                    salary_mapping=salary_mapping, 
-                    salary_cap=self.ctx['site_settings']['salary_cap']
-                )
-
-                population_fitness = self.fitness(
-                    population=population, 
-                    points_mapping=points_mapping
-                )
-
-                pop_len = pop_size if len(population) > pop_size else len(population)
-                
-                # argpartition produces an unsorted rearrangement
-                # use negative parameter and slice to get top n values
-                # this ensures population does not get too large from concatenation
-                population = population[np.argpartition(population_fitness, -pop_len, axis=0)][-pop_len:]
-                newmax = population_fitness.max()
-
-                if newmax > oldmax:
-                    logging.info(f'Lineup improved to {newmax}')
-                    oldmax = newmax
-                    n_unimproved = 0
-                else:
-                    n_unimproved += 1
-                    logging.info(f'Lineup unimproved {n_unimproved} times')
-
-        population_fitness = self.fitness(population=population, points_mapping=points_mapping)
-
+        # FINALIZE RESULTS
         if verbose:
-            idx = population_fitness.argmax()
-            print(pool.loc[population[idx], :])
-            print(f'Lineup score: {population_fitness[idx]}')
-
+            print(pool.loc[best_lineup, :])
+            print(f'Lineup score: {best_fitness}')
+        
         return population, population_fitness
  
-    def pool(self, csvpth: Path = None, **kwargs):
+    def pool(self, csvpth: Path = None, **kwargs) -> pd.DataFrame:
         """Creates pool of players.
 
         Args:
@@ -376,7 +343,7 @@ class GeneticAlgorithm:
                  population_size: int = None,
                  probcol: str = None,
                  agg: bool = None,
-                 **kwargs):
+                 **kwargs) -> np.ndarray:
         """Creates initial population of specified size
         
         Args:
@@ -429,7 +396,7 @@ class GeneticAlgorithm:
                 posfilter: Dict[str, int] = None,
                 column_mapping: Dict[str, str] = None,
                 flex_positions: Iterable[str] = None,
-                **kwargs):
+                **kwargs) -> Dict[str, pd.DataFrame]:
         """Divides pool into positional buckets
         
         Args:   
@@ -463,11 +430,52 @@ class GeneticAlgorithm:
             except:
                 continue
         
-    def validate(self, population: np.ndarray = None, **kwargs):
+    def select(self, 
+               population: np.ndarray = None, 
+               population_fitness: np.ndarray = None,
+               n: int = None,
+               method: str = 'fittest',
+               **kwargs) -> np.ndarray:
+        """Measures fitness of population
+
+        Args:
+            population (np.ndarray): the population to cross over, is 2D array
+            population_fitness (np.ndarray): 1D array of float
+            n (int): number of individuals to select
+            method (str): the selection method, default roulette
+            **kwargs: Keyword arguments for plugins (other than default)
+
+        Returns:
+            np.ndarray: population fitness as 1D array of float
+
+        """
+        # combine keyword arguments with **kwargs
+        if population is not None:
+            kwargs['population'] = population
+        if population_fitness is not None:
+            kwargs['population_fitness'] = population_fitness
+        if n is not None:
+            kwargs['n'] = n
+        if method is not None:
+            kwargs['method'] = method
+
+        # if there is a driver, then use it and run once
+        if mgr := self.driver_managers.get('select'):
+            return mgr.driver.select(**kwargs)
+
+        # otherwise, return select for first valid plugin
+        for ext in self.extension_managers['select'].extensions:
+            try:
+                return ext.obj.select(**kwargs)
+            except:
+                continue
+
+    def validate(self, population: np.ndarray = None, salaries: np.ndarray = None, **kwargs) -> np.ndarray:
         """Validate lineup according to validate plugin criteria
         
         Args:
             population (np.ndarray): the population to validate.
+            salaries (np.ndarray): the population salaries
             **kwargs: Keyword arguments for plugins (other than default)
 
         Returns:
@@ -476,6 +484,8 @@ class GeneticAlgorithm:
         """
         if population is not None:
             kwargs['population'] = population
+        if salaries is not None:
+            kwargs['salaries'] = salaries
 
         if mgr := self.driver_managers.get('validate'):
             return mgr.driver.validate(**kwargs)
