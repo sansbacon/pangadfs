@@ -32,4 +32,16 @@ ctx = {
 ga = GeneticAlgorithm(ctx=ctx)
 population, population_fitness = ga.optimize(verbose=True)
 
+               player team  pos  salary  proj
+16            Giants   NYG  DST    3200   8.4
+34    Patrick Mahomes   KC   QB    8000  26.6
+62        Dalvin Cook  MIN   RB    9500  27.2
+68       Nyheim Hines  IND   RB    4600  15.9
+101      Kyle Rudolph  MIN   TE    2800  10.1
+109     Gabriel Davis  BUF   WR    3000  10.7
+138     Calvin Ridley  ATL   WR    7100  21.6
+142  Justin Jefferson  MIN   WR    6300  20.0
+149     Jakobi Meyers   NE   WR    5300  15.8
+
+Lineup score: 156.3
 ```

@@ -19,7 +19,8 @@ class PopulateDefault(PopulateBase):
                  pospool, 
                  posmap: Dict[str, int], 
                  population_size: int, 
-                 probcol: str='prob') -> np.ndarray:
+                 probcol: str='prob',
+                 **kwargs) -> np.ndarray:
         """Creates individuals in population
         
         Args:
@@ -27,6 +28,7 @@ class PopulateDefault(PopulateBase):
             posmap (Dict[str, int]): positions & accompanying roster slots
             population_size (int): number of individuals to create
             probcol (str): the dataframe column with probabilities
+            **kwargs: keyword arguments
 
         Returns:
             ndarray of size (population_size, sum(posmap.values()))
@@ -45,3 +47,4 @@ class PopulateDefault(PopulateBase):
         # https://stackoverflow.com/questions/54155844/
         dups = (pos_samples['FLEX'][..., None] == pop[:, None, :]).any(-1)
         return np.column_stack((pop, pos_samples['FLEX'][np.invert(dups).cumsum(axis=1).cumsum(axis=1) == 1]))
+ 

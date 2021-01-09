@@ -9,21 +9,18 @@ from typing import Dict
 
 import numpy as np
 import pandas as pd
+from dacite import from_dict
 from stevedore import driver, named
 
-from pangadfs import GeneticAlgorithm
-
-
-def population_exposure(population: np.ndarray = None) -> Dict[int, int]:
-    flat = population.flatten()
-    return {id: size for id, size in zip(flat, np.bincount(flat)[flat])}
+from pangadfs.optimizer import Optimizer
+from pangadfs.gasettings import GASettings
 
 
 def main():
 	"""Example application using pangadfs"""
 	logging.basicConfig(level=logging.INFO)
 
-	ctx = {
+	data = {
 		'ga_settings': {
 			'n_generations': 20,
 			'population_size': 30000,
@@ -42,21 +39,17 @@ def main():
 		}
 	}
 
+	ctx = from_dict(data_class=GASettings, data=data)
+
 	plugins = ('crossover', 'populate', 'select', 'fitness', 'mutate', 'pool', 'pospool')
 	dmgrs = {p: driver.DriverManager(namespace=f'pangadfs.{p}', name=f'{p}_default', invoke_on_load=True) for p in plugins}
 	names = ['validate_salary', 'validate_duplicates']
 	emgrs = {'validate': named.NamedExtensionManager(namespace='pangadfs.validate', names=names, invoke_on_load=True, name_order=True)}
 
 	# set up GeneticAlgorithm object
-	ga = GeneticAlgorithm(ctx=ctx, driver_managers=dmgrs, extension_managers=emgrs)
-	population, fitness = ga.optimize(verbose=True)
+	opt = Optimizer(ctx=ctx)
+	population, fitness = opt.optimize(verbose=True)
 
-	# EXPERIMENTING WITH EXPOSURE CAPS
-	#fittest_population = population[np.where(fitness > np.percentile(fitness, 97))]
-	#exposure = population_exposure(fittest_population)
-	#top_exposure = np.argpartition(np.array(list(exposure.values())), -10)[-10:]
-	#print([round(i, 3) for i in sorted(top_exposure / len(fittest_population), reverse=True)])            
-	
 
 if __name__ == '__main__':
 	main()
