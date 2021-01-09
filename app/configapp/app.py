@@ -1,8 +1,9 @@
-# pangadfs/app/app.py
+# pangadfs/app/configapp/app.py
 # -*- coding: utf-8 -*-
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
 
+import json
 import logging
 from pathlib import Path
 from typing import Dict
@@ -10,45 +11,38 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 from dacite import from_dict
-from stevedore import driver, named
+from stevedore.driver import DriverManager 
+from stevedore.named import NamedExtensionManager
 
-from pangadfs.optimizer import Optimizer
-from pangadfs.gasettings import GASettings
+from gasettings import AppSettings
+from optimizer import Optimizer
+
+
+DATADIR = Path(__file__).parent.parent / 'appdata'
 
 
 def main():
 	"""Example application using pangadfs"""
 	logging.basicConfig(level=logging.INFO)
+	data = json.loads((Path(__file__).parent / 'config.json').read_text())
+	ctx = from_dict(data_class=AppSettings, data=data)
+	ctx.ga_settings.csvpth = DATADIR / ctx.ga_settings.csvpth
 
-	data = {
-		'ga_settings': {
-			'n_generations': 20,
-			'population_size': 30000,
-			'stop_criteria': 10,
-			'points_column': 'proj',
-			'salary_column': 'salary',
-			'position_column': 'pos',
-			'csvpth': Path(__file__).parent / 'pool.csv'
-		},
-
-		'site_settings': {
-			'salary_cap': 50000,
-			'posmap': {'DST': 1, 'QB': 1, 'TE': 1, 'RB': 2, 'WR': 3, 'FLEX': 7},
-			'lineup_size': 9,
-			'posfilter': {'QB': 14, 'RB': 8, 'WR': 8, 'TE': 5, 'DST': 4, 'FLEX': 8}
-		}
+	dmgrs = {
+      k: DriverManager(namespace=f'pangadfs.{k}', name=v, invoke_on_load=True)
+      for k, v in ctx.plugin_settings.driver_managers.items()
 	}
 
-	ctx = from_dict(data_class=GASettings, data=data)
-
-	plugins = ('crossover', 'populate', 'select', 'fitness', 'mutate', 'pool', 'pospool')
-	dmgrs = {p: driver.DriverManager(namespace=f'pangadfs.{p}', name=f'{p}_default', invoke_on_load=True) for p in plugins}
-	names = ['validate_salary', 'validate_duplicates']
-	emgrs = {'validate': named.NamedExtensionManager(namespace='pangadfs.validate', names=names, invoke_on_load=True, name_order=True)}
+	emgrs = {
+	  k: NamedExtensionManager(namespace=f'pangadfs.{k}', names=v, invoke_on_load=True, name_order=True)
+      for k, v in ctx.plugin_settings.extension_managers.items()
+	}
 
 	# set up GeneticAlgorithm object
-	opt = Optimizer(ctx=ctx)
-	population, fitness = opt.optimize(verbose=True)
+	opt = Optimizer(ctx=ctx, 
+	                driver_managers=dmgrs, 
+					extension_managers=emgrs)
+	_ = opt.optimize(verbose=True)
 
 
 if __name__ == '__main__':

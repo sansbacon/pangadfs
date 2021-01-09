@@ -4,18 +4,22 @@
 # Licensed under the Apache 2.0 License
 
 import logging
-from typing import Iterable
+from typing import Any, Dict, Tuple
+
+import numpy as np
 
 from pangadfs.ga import GeneticAlgorithm
 
 
 class Optimizer:
 
-    def __init__(self, ctx: dict):
+    def __init__(self, ctx: dict, driver_managers: Dict[str, Any], extension_managers: Dict[str, Any]):
         """Creates GeneticAlgorithm instance
 
         Args:
             ctx (dict): context dict with all relevant settings
+            driver_managers (Dict[str, Any]): driver managers
+            extension_managers (Dict[str, Any]): extension managers
 
         Returns:
             Optimizer: the optimizer instance
@@ -23,38 +27,14 @@ class Optimizer:
         """
         logging.getLogger(__name__).addHandler(logging.NullHandler())
 
-        # ensure have necessary parameters
+        # app settings
         self.ctx = ctx
-        if errors := self._validate_ctx():
-            raise ValueError('\n'.join(errors))
 
         # create ga
-        self.ga = GeneticAlgorithm(ctx=ctx, driver_managers=dmgrs, extension_managers=emgrs)
-
-    def _validate_ctx(self) -> Iterable[str]:
-        """Ensures that ctx dict has all relevant settings
-        
-        Args:
-            None
-            
-        Returns:
-            Iterable[str]: the error messages
-
-        """
-        errors = []
-        if 'ga_settings' not in self.ctx:
-            errors.append('Missing ga_settings section')
-        else:
-            for k in ('n_generations', 'population_size', 'points_column', 'salary_column', 'csvpth'):
-                if k not in self.ctx['ga_settings']:
-                    errors.append(f'ga_settings missing {k}')
-        if 'site_settings' not in self.ctx:
-            errors.append('Missing site_settings section')
-        else:
-            for k in ('salary_cap', 'lineup_size', 'posfilter'):
-                if k not in self.ctx['site_settings']:
-                    errors.append(f'site_settings missing {k}')
-        return errors
+        self.ga = GeneticAlgorithm(
+            driver_managers=driver_managers, 
+            extension_managers=extension_managers
+        )
 
     def optimize(self, verbose: bool = True, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """Default routine for optimizing lineup
@@ -67,25 +47,30 @@ class Optimizer:
             Tuple[np.ndarray, np.ndarray]: population and population fitness arrays                
         
         """
-        pop_size = self.ctx['ga_settings']['population_size']
-        pool = self.ga.pool(csvpth=self.ctx['ga_settings']['csvpth'])
-        cmap = {'points': self.ctx['ga_settings']['points_column'],
-			    'position': self.ctx['ga_settings']['position_column'],
-			    'salary': self.ctx['ga_settings']['salary_column']}
-        posfilter = self.ctx['site_settings']['posfilter']
-        pospool = self.ga.pospool(pool=pool, posfilter=posfilter, column_mapping=cmap)
+        pop_size = self.ctx.ga_settings.population_size
+        pool = self.ga.pool(csvpth=self.ctx.ga_settings.csvpth)
+        cmap = {'points': self.ctx.ga_settings.points_column,
+			    'position': self.ctx.ga_settings.position_column,
+			    'salary': self.ctx.ga_settings.salary_column}
+        posfilter = self.ctx.site_settings.posfilter
+        pospool = self.ga.pospool(
+            pool=pool, 
+            posfilter=posfilter, 
+            column_mapping=cmap, 
+            flex_positions=self.ctx.site_settings.flex_positions
+        )
 
         # create dict of index and stat value
         # this will allow easy lookup later on
-        cmap = {'points': self.ctx['ga_settings']['points_column'],
-                'salary': self.ctx['ga_settings']['salary_column']}
+        cmap = {'points': self.ctx.ga_settings.points_column,
+                'salary': self.ctx.ga_settings.salary_column}
         points = pool[cmap['points']].values
         salaries = pool[cmap['salary']].values
         
         # CREATE INITIAL POPULATION
         initial_population = self.ga.populate(
             pospool=pospool, 
-            posmap=self.ctx['site_settings']['posmap'], 
+            posmap=self.ctx.site_settings.posmap, 
             population_size=pop_size
         )
 
@@ -93,7 +78,7 @@ class Optimizer:
         initial_population = self.ga.validate(
             population=initial_population, 
             salaries=salaries,
-            salary_cap=self.ctx['site_settings']['salary_cap']
+            salary_cap=self.ctx.site_settings.salary_cap
         )
 
         population_fitness = self.ga.fitness(
@@ -108,8 +93,8 @@ class Optimizer:
 
         # CREATE NEW GENERATIONS
         n_unimproved = 0
-        for i in range(1, self.ctx['ga_settings']['n_generations'] + 1):
-            if n_unimproved == self.ctx['ga_settings']['stop_criteria']:
+        for i in range(1, self.ctx.ga_settings.n_generations + 1):
+            if n_unimproved == self.ctx.ga_settings.stop_criteria:
                 break
             if i == 1:
                 population = initial_population
@@ -121,31 +106,34 @@ class Optimizer:
             elite = self.ga.select(
                 population=population, 
                 population_fitness=population_fitness, 
-                n=len(population) // 5,
-                method='fittest'
+                n=len(population) // self.ctx.ga_settings.elite_divisor,
+                method=self.ctx.ga_settings.elite_method
             )
 
             selected = self.ga.select(
                 population=population, 
                 population_fitness=population_fitness, 
                 n=len(population),
-                method='roulette'
+                method=self.ctx.ga_settings.select_method
             )
 
             # uniform crossover
-            crossed_over = self.ga.crossover(population=selected, method='uniform')
+            crossed_over = self.ga.crossover(
+                population=selected, 
+                method=self.ctx.ga_settings.crossover_method
+            )
 
             # reduce mutation over generations
-            mutation_rate = max(.05, n_unimproved / 50)
+            mutation_rate = max(self.ctx.ga_settings.mutation_rate, n_unimproved / 50)
             mutated = self.ga.mutate(population=crossed_over, mutation_rate=mutation_rate)
 
             population = self.ga.validate(
                 population=np.vstack((elite, mutated)), 
                 salaries=salaries, 
-                salary_cap=self.ctx['site_settings']['salary_cap']
+                salary_cap=self.ctx.site_settings.salary_cap
             )
             
-            population_fitness = self.fitness(population=population, points=points)
+            population_fitness = self.ga.fitness(population=population, points=points)
             omidx = population_fitness.argmax()
             generation_max = population_fitness[omidx]
         
