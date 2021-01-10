@@ -17,6 +17,7 @@ class CrossoverDefault(CrossoverBase):
         
         Args:
             population (np.ndarray): the population to crossover. Shape is n_individuals x n_chromosomes.
+            **kwargs: Arbitrary keyword arguments
 
         Returns:
             np.ndarray: concatenation of two offspring
@@ -36,7 +37,8 @@ class CrossoverDefault(CrossoverBase):
         Args:
             population (np.ndarray): the population to crossover. Shape is n_individuals x n_chromosomes.
             point (int): the crossover point, default 3
-
+            **kwargs: Arbitrary keyword arguments
+        
         Returns:
             np.ndarray: concatenation of two offspring
 
@@ -52,7 +54,8 @@ class CrossoverDefault(CrossoverBase):
         Args:
             population (np.ndarray): the population to crossover. Shape is n_individuals x n_chromosomes.
             points (Tuple[int]): the crossover points, default (3, 7)
-            
+            **kwargs: Arbitrary keyword arguments    
+    
         Returns:
             np.ndarray: concatenation of two offspring
 
@@ -72,6 +75,7 @@ class CrossoverDefault(CrossoverBase):
         
         Args:
             population (np.ndarray): the population to crossover. Shape is n_individuals x n_chromosomes.
+            **kwargs: Arbitrary keyword arguments
 
         Returns:
             np.ndarray: concatenation of two offspring
@@ -87,6 +91,7 @@ class CrossoverDefault(CrossoverBase):
         Args:
             population (np.ndarray): the population to crossover. Shape is n_individuals x n_chromosomes.
             method (str): crossover method, 'uniform', 'diverse', 'one_point', or 'two_point'.
+            **kwargs: Arbitrary keyword arguments
 
         Returns:
             np.ndarray: concatenation of two offspring

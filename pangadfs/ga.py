@@ -1,11 +1,11 @@
-# gadfs/gadfs/ga.py
+# pangadfs/pangadfs/ga.py
 # -*- coding: utf-8 -*-
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
 
 import logging
 from pathlib import Path
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable
 
 import numpy as np
 import pandas as pd
@@ -14,12 +14,14 @@ from stevedore.named import NamedExtensionManager
 
 
 class GeneticAlgorithm:
-    """Handles coordination of stevedore plugin managers."""
+    """Handles coordination of genetic algorithm plugins"""
 
     PLUGIN_NAMESPACES = (
        'pool', 'pospool', 'populate', 'fitness', 
        'select', 'crossover', 'mutate', 'validate'
     )
+
+    VALIDATE_PLUGINS = ('validate_salary', 'validate_duplicates')
 
     def __init__(self, 
                  driver_managers: Dict[str, DriverManager] = None, 
@@ -47,14 +49,13 @@ class GeneticAlgorithm:
             self._load_plugins()
 
     def _load_plugins(self):
-        """Ensures all plugins loaded"""
+        """Loads default plugins for any namespace that doesn't have a plugin"""
         for ns in self.PLUGIN_NAMESPACES:
             if ns not in self.driver_managers and ns not in self.extension_managers:
                 if ns == 'validate':
-	                names = ['validate_salary', 'validate_duplicates']
 	                self.extension_managers[ns] = NamedExtensionManager(
                         namespace='pangadfs.validate', 
-                        names=names, 
+                        names=self.VALIDATE_PLUGINS, 
                         invoke_on_load=True, 
                         name_order=True
                     )
@@ -227,14 +228,13 @@ class GeneticAlgorithm:
         params.pop('self', None)
         agg = params.pop('agg')
         kwargs = params.pop('kwargs')
-        kwargs['agg'] = agg
 
         # if there is a driver, then use it and run once
         if mgr := self.driver_managers.get('populate'):
             return mgr.driver.populate(**params, **kwargs)
 
         # if agg=True, then aggregate populations
-        if kwargs.get('agg'):
+        if agg:
             pops = []
             for ext in self.extension_managers['populate'].extensions:
                 try:
@@ -292,7 +292,7 @@ class GeneticAlgorithm:
                n: int = None,
                method: str = 'fittest',
                **kwargs) -> np.ndarray:
-        """Measures fitness of population
+        """Selects/filters population
 
         Args:
             population (np.ndarray): the population to cross over, is 2D array
@@ -349,7 +349,3 @@ class GeneticAlgorithm:
             params['population'] = population
             population = ext.obj.validate(**params, **kwargs)
         return population
-
-
-if __name__ == '__main__':
-    pass

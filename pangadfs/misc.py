@@ -3,10 +3,9 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
 
-from typing import Dict, Iterable, Tuple
+from typing import Iterable, Tuple
 
 import numpy as np
-import pandas as pd
 
 
 def diversity(population: np.ndarray) -> np.ndarray:
@@ -24,7 +23,10 @@ def diversity(population: np.ndarray) -> np.ndarray:
     return np.einsum('ij,kj->ik', a, a)
 
 
-def multidimensional_shifting(elements: Iterable, num_samples: int, sample_size: int, probs: Iterable) -> np.ndarray:
+def multidimensional_shifting(elements: Iterable, 
+                              num_samples: int, 
+                              sample_size: int, 
+                              probs: Iterable) -> np.ndarray:
     """Based on https://medium.com/ibm-watson/incredibly-fast-random-sampling-in-python-baf154bd836a
     
     Args:
@@ -34,7 +36,7 @@ def multidimensional_shifting(elements: Iterable, num_samples: int, sample_size:
         probs (iterable): is same size as elements
 
     Returns:
-        ndarray with shape (num_samples, sample_size)
+        ndarray: of shape (num_samples, sample_size)
         
     """
     replicated_probabilities = np.tile(probs, (num_samples, 1))
@@ -52,7 +54,7 @@ def parents(population: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         population (np.ndarray): the population to crossover. Shape is n_individuals x n_chromosomes.
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]: population split into half
+        Tuple[np.ndarray, np.ndarray]: population split into two equal-size arrays
 
     """
     fathers, mothers = np.array_split(population, 2)

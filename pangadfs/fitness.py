@@ -13,12 +13,14 @@ class FitnessDefault(FitnessBase):
     def fitness(self,
                 *, 
                 population: np.ndarray, 
-                points: np.ndarray):
+                points: np.ndarray,
+                **kwargs):
         """Assesses population fitness using supplied mapping
         
         Args:
             population (np.ndarray): the population to assess fitness
             points (np.ndarray): 1D array of projected points in same order as pool
+            **kwargs: Arbitrary keyword arguments
 
         Returns:
             np.ndarray: 1D array of float

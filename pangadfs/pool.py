@@ -17,13 +17,15 @@ class PoolDefault(PoolBase):
              *, 
              csvpth: Path,
              thresh: int = 4,
+             **kwargs
              ) -> pd.DataFrame:
         """Creates initial pool
         
         Args:
             csvpth (Path): path for csv file
             thresh (int): global filter on low-scoring players
-
+            **kwargs: keyword arguments for plugins
+            
         Returns:
             DataFrame with columns:
             player, team, pos, salary, proj

@@ -3,10 +3,7 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
 
-from typing import Dict, Iterable, Tuple
-
 import numpy as np
-import pandas as pd
 
 from pangadfs.base import MutateBase
 
@@ -29,5 +26,10 @@ class MutateDefault(MutateBase):
         # where mutate is true, swap randomly-selected player into population
         # ensures swap comes from same lineup slot, but does not prevent duplicates from other slots
         # so lineup positional allocation will stay valid, but duplicates are possible
-        mutate = (np.random.binomial(n=1, p=mutation_rate, size=population.size).reshape(population.shape).astype(bool))
-        return np.where(mutate, population[np.random.choice(len(population), size=len(population), replace=False)], population)
+        mutate = (
+            np.random.binomial(n=1, p=mutation_rate, size=population.size)
+            .reshape(population.shape)
+            .astype(bool)
+        )
+        swap = population[np.random.choice(len(population), size=len(population), replace=False)]
+        return np.where(mutate, swap, population)

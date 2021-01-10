@@ -1,4 +1,4 @@
-# gadfs/gadfs/optimizer.py
+# panggadfs/app/configapp/optimizer.py
 # -*- coding: utf-8 -*-
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
@@ -9,15 +9,19 @@ from typing import Any, Dict, Tuple
 import numpy as np
 
 from pangadfs.ga import GeneticAlgorithm
+from gasettings import AppSetting
 
 
 class Optimizer:
 
-    def __init__(self, ctx: dict, driver_managers: Dict[str, Any], extension_managers: Dict[str, Any]):
+    def __init__(self, 
+                 ctx: AppSetting, 
+                 driver_managers: Dict[str, Any], 
+                 extension_managers: Dict[str, Any]):
         """Creates GeneticAlgorithm instance
 
         Args:
-            ctx (dict): context dict with all relevant settings
+            ctx (AppSetting): context dataclass with all relevant settings
             driver_managers (Dict[str, Any]): driver managers
             extension_managers (Dict[str, Any]): extension managers
 

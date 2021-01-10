@@ -1,6 +1,8 @@
-# pandagdfs/validate.py
+# pangadfs/pangadfs/validate.py
+# -*- coding: utf-8 -*-
+# Copyright (C) 2020 Eric Truett
+# Licensed under the Apache 2.0 License
 
-from typing import Dict
 import numpy as np
 from numpy_indexed import unique
 
@@ -17,6 +19,7 @@ class DuplicatesValidate(ValidateBase):
         
             Args:
                 population (np.ndarray): the population to validate
+                **kwargs: keyword arguments for plugins
 
             Returns:
                 np.ndarray: same width as population, likely has less rows
@@ -43,7 +46,7 @@ class SalaryValidate(ValidateBase):
                 population (np.ndarray): the population to validate
                 salaries (np.ndarray): 1D where indices are in same order as player indices
                 salary_cap (int): the salary cap, e.g., 50000 or 60000
-                **keyword arguments
+                **kwargs: keyword arguments for plugins
 
             Returns:
                 np.ndarray: same width as population, likely has less rows

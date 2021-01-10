@@ -24,7 +24,7 @@ def diversity_penalty(population: np.ndarray = None) -> np.ndarray:
 
 
 def ownership_penalty(ownership, base=3, boost=2) -> np.ndarray:
-    """Returns 1D array of penalties
+    """Returns 1D array of penalties that are inverse to projected ownership
     
     Args:
         ownership (np.ndarray): 1D array of ownership

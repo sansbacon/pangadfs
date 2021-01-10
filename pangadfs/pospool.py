@@ -45,4 +45,3 @@ class PospoolDefault(PospoolBase):
             prob_ = prob_ / prob_.sum()
             d[position] = tmp.assign(prob=prob_)
         return d
-

@@ -1,4 +1,7 @@
-# pangadfs/select.py
+# pangadfs/pangadfs/select.py
+# -*- coding: utf-8 -*-
+# Copyright (C) 2020 Eric Truett
+# Licensed under the Apache 2.0 License
 
 import numpy as np
 from pangadfs.base import SelectBase
@@ -18,6 +21,7 @@ class SelectDefault(SelectBase):
             population (np.ndarray): the population to mutate. Shape is n_individuals x n_chromosomes.
             population_fitness (np.ndarray): the population fitness. Is a 1D array same length as population.
             n (int): total number of individuals to select
+            **kwargs: keyword arguments for plugins
 
         Returns:
             np.ndarray: selected population
@@ -39,6 +43,7 @@ class SelectDefault(SelectBase):
             population (np.ndarray): the population to mutate. Shape is n_individuals x n_chromosomes.
             population_fitness (np.ndarray): the population fitness. Is a 1D array same length as population.
             n (int): total number of individuals to select
+            **kwargs: keyword arguments for plugins
 
         Returns:
             np.ndarray: selected population
@@ -63,6 +68,7 @@ class SelectDefault(SelectBase):
             population (np.ndarray): the population to mutate. Shape is n_individuals x n_chromosomes.
             population_fitness (np.ndarray): the population fitness. Is a 1D array same length as population.
             n (int): total number of individuals to select
+            **kwargs: keyword arguments for plugins
 
         Returns:
             np.ndarray: selected population
@@ -83,6 +89,7 @@ class SelectDefault(SelectBase):
             population (np.ndarray): the population to mutate. Shape is n_individuals x n_chromosomes.
             population_fitness (np.ndarray): the population fitness. Is a 1D array same length as population.
             n (int): total number of individuals to select
+            **kwargs: keyword arguments for plugins
 
         Returns:
             np.ndarray: selected population
@@ -104,6 +111,7 @@ class SelectDefault(SelectBase):
             population (np.ndarray): the population to mutate. Shape is n_individuals x n_chromosomes.
             population_fitness (np.ndarray): the population fitness. Is a 1D array same length as population.
             n (int): total number of individuals to select
+            **kwargs: keyword arguments for plugins
 
         Returns:
             np.ndarray: selected population
@@ -124,6 +132,7 @@ class SelectDefault(SelectBase):
             population (np.ndarray): the population to mutate. Shape is n_individuals x n_chromosomes.
             population_fitness (np.ndarray): the population fitness. Is a 1D array same length as population.
             tournament_size (int): number of individuals to compete against each other
+            **kwargs: keyword arguments for plugins
 
         Returns:
             np.ndarray: selected population
@@ -148,6 +157,7 @@ class SelectDefault(SelectBase):
             population_fitness (np.ndarray): the population fitness. Is a 1D array same length as population.
             n (int): total number of individuals to select
             method (str): 'roulette', 'su', 'scaled'; default 'roulette'
+            **kwargs: keyword arguments for plugins
 
         Returns:
             np.ndarray: selected population
@@ -168,4 +178,4 @@ class SelectDefault(SelectBase):
             'n': n
         }
 
-        return dispatch.get(method, self._roulette_wheel)(**{**params, **kwargs})
+        return dispatch.get(method, self._roulette_wheel)(**params, **kwargs)

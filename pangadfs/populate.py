@@ -3,10 +3,9 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the Apache 2.0 License
 
-from typing import Dict, Iterable, Tuple
+from typing import Dict
 
 import numpy as np
-import pandas as pd
 
 from pangadfs.base import PopulateBase
 from pangadfs.misc import multidimensional_shifting
