@@ -7,6 +7,15 @@ This flexibility is made possible by the [stevedore plugin system](https://docs.
 
 ## Optimizing with Genetic Algorithms
 
+In principle, a population of individuals selected from the search space , often in a
+random manner, serves as candidate solutions to optimize the problem [3]. The
+individuals in this population are evaluated through ( "fitness" ) adaptation function.
+A selection mechanism is then used to select individuals to be used as parents to
+those of the next generation. These individuals will then be crossed and mutated to
+form the new offspring. The next generation is finally formed by an alternative
+mechanism between parents and their offspring [4]. This process is repeated until a
+certain satisfaction condition.
+
 Genetic algorithms maintain a population of candidate solutions, called individuals, for that given problem. These candidate solutions are iteratively evaluated and combined to create a new generation of solutions. Individuals with higher fitness (rated as better at solving the relevant problem) have a greater chance of being selected and passing their qualities to the next generation of candidate solutions This way, as generations go by, candidate solutions get better at solving the problem at hand.
 
 Applied to the context of daily fantasy lineups, a genetic algorithm works as follows:

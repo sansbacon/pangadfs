@@ -1,5 +1,9 @@
 # site configuration
 site_name: pangadfs
+site_url: https://sansbacon.github.io/pangadfs/
+site_description: pandas-based lineup optimization framework
+site_author: Eric Truett
+repo_url: https://github.com/sansbacon/pangadfs
 
 theme:
   name: material
@@ -7,6 +11,13 @@ theme:
 plugins:
   - search
   - mkdocstrings
+
+markdown_extensions:
+  - toc
+  - admonition
+  - def_list
+  - pymdownx.tabbed
+  - pymdownx.superfences
 
 nav:
     - Home: index.md
