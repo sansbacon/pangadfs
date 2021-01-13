@@ -74,6 +74,13 @@ class SelectDefault(SelectBase):
             np.ndarray: selected population
 
         """
+        # alternative implementation if np.random.choice changes
+        # fitness_cumsum = fitness.cumsum()   # the "roulette wheel"
+        # fitness_sum = fitness_cumsum[-1]    # sum of all fitness values (size of the wheel)
+        # sampled_values = np.random.random(size) * fitness_sum
+        # For each sampled value, get the corresponding roulette wheel slot
+        # selected = np.searchsorted(fitness_cumsum, sampled_values)
+        # return selected
         weights = population_fitness / population_fitness.sum()
         return population[np.random.choice(len(population_fitness), size=n, replace=True, p=weights)]       
 
@@ -117,8 +124,23 @@ class SelectDefault(SelectBase):
             np.ndarray: selected population
 
         """
-        weights = population_fitness / population_fitness.sum()
-        return population[np.random.choice(len(population), size=n, replace=False, p=weights)]
+        # cumsum creates the roulette wheel
+        # is order-insensitive: if 1st element largest, starts there
+        fitness_cumsum = population_fitness.cumsum()
+        fitness_sum = fitness_cumsum[-1]
+
+        # so if total is 100 and n is 10
+        # 1st point is 10 starting point is first element > 10
+        step = fitness_sum / n
+        start = np.random.random() * step
+
+        # selectors are the evenly-spaced points on wheel
+        selectors = np.arange(start, fitness_sum, step)
+
+        # Find indices where selectors should be inserted to maintain order.
+        # so if fitness is 1, 2, 3, 4, 5 and selectors 1.2 and 3.1
+        # np.searchsorted would be [1, 3]
+        return population[np.searchsorted(fitness_cumsum, selectors)]
      
     def _tournament(self, 
                     *, 
