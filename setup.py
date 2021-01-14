@@ -15,10 +15,10 @@ def run():
     setup(
         name=PACKAGE_NAME,
         version="0.1",
-        description="extensible pandas-based library for NFL dfs genetic algorithm",
+        description="extensible pandas-based genetic algorithm for fantasy sports lineup optimization",
         author="Eric Truett",
         author_email="eric@erictruett.com",
-        license="Apache 2.0",
+        license="MIT",
         packages=find_packages(),
         entry_points={
           'pangadfs.crossover': ['crossover_default = pangadfs.crossover:CrossoverDefault'],
@@ -30,7 +30,8 @@ def run():
                                 'validate_duplicates = pangadfs.validate:DuplicatesValidate'],
           'pangadfs.pool': ['pool_default = pangadfs.pool:PoolDefault'],
           'pangadfs.pospool': ['pospool_default = pangadfs.pospool:PospoolDefault'],
-          'console_scripts': ['pangaopt=app.app:main']
+          'console_scripts': ['basicapp=pangadfs.app.basicapp.app:run', 
+                              'configapp=pangadfs.app.configapp.app:run']
         },
         zip_safe=False,
     )

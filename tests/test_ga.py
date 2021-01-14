@@ -1,7 +1,7 @@
 # pangadfs/tests/test_ga.py
 # -*- coding: utf-8 -*-
 # Copyright (C) 2020 Eric Truett
-# Licensed under the Apache 2.0 License
+# Licensed under the MIT License
 
 import os
 from pathlib import Path

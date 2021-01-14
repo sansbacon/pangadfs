@@ -13,28 +13,35 @@ plugins:
   - mkdocstrings
 
 markdown_extensions:
-  - toc
-  - admonition
-  - def_list
-  - pymdownx.tabbed
-  - pymdownx.superfences
+- toc:
+    permalink: true
+- admonition
+- codehilite
+- extra
+- pymdownx.superfences
+- pymdownx.tabbed
 
 nav:
-    - Home: index.md
-    - About: about.md
-    - Plugin Namespaces: plugin-namespaces.md
-    - Default Plugins: default-plugins.md
-    - Building Apps with pangadfs: building-apps.md
-    - Code Reference:
-        - base: base-reference.md
-        - crossover: crossover-reference.md
-        - fitness: fitness-reference.md
-        - misc: misc-reference.md
-        - mutate: mutate-reference.md
-        - penalty: penalty-reference.md
-        - pool: pool-reference.md
-        - populate: populate-reference.md
-        - pospool: pospool-reference.md
-        - postprocess: postprocess-reference.md
-        - select: select-reference.md
-        - validate: validate-reference.md
+- pangadfs: index.md
+- features.md
+- history-design-future.md
+- userguide.md
+- pangadfs Development:
+    - plugin-namespaces.md
+    - default-plugins.md
+    - building-apps.md
+    - contributing.md
+- release-notes.md
+- Code Reference:
+    - base: base-reference.md
+    - crossover: crossover-reference.md
+    - fitness: fitness-reference.md
+    - misc: misc-reference.md
+    - mutate: mutate-reference.md
+    - penalty: penalty-reference.md
+    - pool: pool-reference.md
+    - populate: populate-reference.md
+    - pospool: pospool-reference.md
+    - postprocess: postprocess-reference.md
+    - select: select-reference.md
+    - validate: validate-reference.md
