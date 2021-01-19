@@ -49,36 +49,36 @@ class DiversityPenalty(PenaltyBase):
 class OwnershipPenalty(PenaltyBase):
 
     def penalty(self, *, ownership: np.ndarray, base: float =3, boost: float = 2) -> np.ndarray:
-    """Calculates penalties that are inverse to projected ownership
-    
-    Args:
-        ownership (np.ndarray): 1D array of ownership
-        base (int): the logarithm base, default 3
-        boost (int): the constant to boost low-owned players
+        """Calculates penalties that are inverse to projected ownership
         
-    Returns:
-        np.ndarray: 1D array of penalties
-        
-    """
-    return 0 - np.log(ownership) / np.log(base) + boost
+        Args:
+            ownership (np.ndarray): 1D array of ownership
+            base (int): the logarithm base, default 3
+            boost (int): the constant to boost low-owned players
+            
+        Returns:
+            np.ndarray: 1D array of penalties
+            
+        """
+        return 0 - np.log(ownership) / np.log(base) + boost
 
 
 class HighOwnershipPenalty(PenaltyBase):
 
     def penalty(self, *, ownership: np.ndarray, base: float =3, boost: float = 2) -> np.ndarray:
-    """Calculates penalties that are inverse to projected ownership
-    
-    Args:
-        ownership (np.ndarray): 1D array of ownership
-        base (int): the logarithm base, default 3
-        boost (int): the constant to boost low-owned players
+        """Calculates penalties that are inverse to projected ownership
         
-    Returns:
-        np.ndarray: 1D array of penalties
-        
-    TODO: implement this method
-    """
-    pass
-    #return 0 - np.log(ownership) / np.log(base) + boost
+        Args:
+            ownership (np.ndarray): 1D array of ownership
+            base (int): the logarithm base, default 3
+            boost (int): the constant to boost low-owned players
+            
+        Returns:
+            np.ndarray: 1D array of penalties
+            
+        TODO: implement this method
+        """
+        pass
+        #return 0 - np.log(ownership) / np.log(base) + boost
 
 
