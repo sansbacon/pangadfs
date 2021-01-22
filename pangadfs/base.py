@@ -40,6 +40,17 @@ class MutateBase(metaclass=abc.ABCMeta):
         """Mutates population at given mutation rate."""
 
 
+class PenaltyBase(metaclass=abc.ABCMeta):
+    """Base class for penalty plugins."""
+
+    def __init__(self):
+        logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+    @abc.abstractmethod
+    def penalty(self, *args, **kwargs):
+        """Calculates penalty for population fitness."""
+
+
 class PopulateBase(metaclass=abc.ABCMeta):
     """Base class for populate plugins."""
 
