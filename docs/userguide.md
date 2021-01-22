@@ -1,3 +1,3 @@
-# pangadfs User Guide
+# Using pangadfs
 
 This is the user guide!!!

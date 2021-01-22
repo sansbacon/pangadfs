@@ -6,7 +6,29 @@
 import numpy as np
 
 
-def diversity_penalty(population: np.ndarray = None) -> np.ndarray:
+def distance_penalty(population: np.ndarray) -> np.ndarray:
+    """Calculates distance penalty for overlapping lineups
+    
+    Args:
+        population (np.ndarray): the population
+
+    Returns:
+        np.ndarray: 1D array of float
+
+    """
+    # one-hot encoded population
+    # so, assume pool has ids 0, 1, 2, 3, 4
+    # lineup is 1, 2
+    # ohe would be [0, 1, 1, 0, 0] for that lineup
+    ohe = np.sum((np.arange(population.max()) == population[...,None]-1).astype(int), axis=1)
+
+    # distance
+    b = ohe.reshape(ohe.shape[0], 1, ohe.shape[1])
+    dist = np.sqrt(np.einsum('ijk, ijk->ij', ohe-b, ohe-b))
+    return 0 - ((dist - dist.mean()) / dist.std())
+
+
+def diversity_penalty(population: np.ndarray) -> np.ndarray:
     """Calculates diversity penalty for overlapping lineups
     
     Args:

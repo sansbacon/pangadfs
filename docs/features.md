@@ -1,4 +1,4 @@
-# pangadfs Features
+# Features
 
 pangadfs is a pandas-based genetic algorithm library for daily fantasy optimization (currently NFL only). pangadfs is extensible by design and is motivated by difficulties I encountered with other optimizers, which tend to have a monolithic design and don't make it easy to swap out components. 
 
