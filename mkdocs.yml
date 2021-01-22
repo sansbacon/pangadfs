@@ -25,6 +25,7 @@ nav:
 - pangadfs: index.md
 - features.md
 - history-design-future.md
+- contraints-penalties.md
 - userguide.md
 - Developing pangadfs apps and plugins:
     - plugin-namespaces.md

@@ -25,6 +25,11 @@ def run():
         packages=find_packages(),
         entry_points={
           'pangadfs.crossover': ['crossover_default = pangadfs.crossover:CrossoverDefault'],
+          'pangadfs.penalty': ['distance_penalty = pangadfs.penalty.DistancePenalty',
+                               'diversity_penalty = pangadfs.penalty.DiversityPenalty',
+                               'ownership_penalty = pangadfs.penalty.OwnershipPenalty',
+                               'high_ownership_penalty = pangadfs.penalty.HighOwnershipPenalty',
+                               ],
           'pangadfs.select': ['select_default = pangadfs.select:SelectDefault'],
           'pangadfs.mutate': ['mutate_default = pangadfs.mutate:MutateDefault'],
           'pangadfs.populate': ['populate_default = pangadfs.populate:PopulateDefault'],
