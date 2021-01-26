@@ -5,10 +5,11 @@
 
 import logging
 from pathlib import Path
-from typing import Dict, Iterable
+from typing import Any, Dict, Iterable
 
 import numpy as np
 import pandas as pd
+
 from stevedore.driver import DriverManager
 from stevedore.named import NamedExtensionManager
 
@@ -17,7 +18,7 @@ class GeneticAlgorithm:
     """Handles coordination of genetic algorithm plugins"""
 
     PLUGIN_NAMESPACES = (
-       'pool', 'pospool', 'populate', 'fitness', 
+       'pool', 'pospool', 'populate', 'fitness', 'optimize',
        'select', 'crossover', 'mutate', 'validate'
     )
 
@@ -177,6 +178,40 @@ class GeneticAlgorithm:
             except:
                 continue
 
+    def optimize(self, 
+               *,
+               ctx: Any = None,
+               driver_managers: Dict[str, DriverManager] = None, 
+               extension_managers: Dict[str, NamedExtensionManager] = None,
+               **kwargs) -> np.ndarray:
+        """Optimizes population
+
+        Args:
+            ctx (Any): context dict or object
+            driver_managers (Dict[str, DriverManager]): plugin driver managers
+            extension_managers (Dict[str, NamedExtensionManager]): plugin extension managers
+            **kwargs: Keyword arguments for plugins (other than default)
+
+        Returns:
+            dict
+
+        """
+        # combine keyword arguments with **kwargs
+        params = locals().copy()
+        params.pop('self', None)
+        kwargs = params.pop('kwargs')
+
+        # if there is a driver, then use it and run once
+        if mgr := self.driver_managers.get('optimize'):
+            return mgr.driver.optimize(**params, **kwargs)
+
+        # otherwise, optimize with first valid plugin
+        for ext in self.extension_managers['optimize'].extensions:
+            try:
+                return ext.obj.optimize(**params, **kwargs)
+            except:
+                continue
+            
     def pool(self, *, csvpth: Path = None, **kwargs) -> pd.DataFrame:
         """Creates pool of players.
 

@@ -32,6 +32,7 @@ def run():
                                ],
           'pangadfs.select': ['select_default = pangadfs.select:SelectDefault'],
           'pangadfs.mutate': ['mutate_default = pangadfs.mutate:MutateDefault'],
+          'pangadfs.optimize': ['optimize_default = pangadfs.optimize:OptimizeDefault'],
           'pangadfs.populate': ['populate_default = pangadfs.populate:PopulateDefault'],
           'pangadfs.fitness': ['fitness_default = pangadfs.fitness:FitnessDefault'],
           'pangadfs.validate': ['validate_salary = pangadfs.validate:SalaryValidate',
