@@ -6,10 +6,6 @@
 import logging
 from typing import Any, Dict
 
-import pandas as pd
-from stevedore.driver import DriverManager
-from stevedore.named import NamedExtensionManager
-
 from pangadfs.base import OptimizeBase
 from pangadfs.ga import GeneticAlgorithm
 
@@ -19,26 +15,24 @@ class OptimizeDefault(OptimizeBase):
     def optimize(self, 
             *,
             ctx: Dict[str, Any],
-            driver_managers: Dict[str, DriverManager] = None, 
-            extension_managers: Dict[str, NamedExtensionManager] = None,
+            ga: GeneticAlgorithm,
             **kwargs
             ) -> Dict[str, Any]:
         """Creates initial pool
         
         Args:
-
+            ctx (Dict[str, Any]): the context dict
+            ga (GeneticAlgorithm): GeneticAlgorithm instance
             **kwargs: keyword arguments for plugins
             
         Returns:
-            Tuple[pd.DataFrame]
+            Dict
+            'population': np.ndarray,
+            'fitness': np.ndarray,
+            'best_lineup': pd.DataFrame,
+            'best_score': float
 
-        """
-        # set up GeneticAlgorithm object
-        ga = GeneticAlgorithm(
-            driver_managers=driver_managers, 
-            extension_managers=extension_managers
-        )
-        
+        """      
         # create pool and pospool
         # pospool used to generate initial population
         # is a dict of position_name: DataFrame

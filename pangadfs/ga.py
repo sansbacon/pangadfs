@@ -25,12 +25,14 @@ class GeneticAlgorithm:
     VALIDATE_PLUGINS = ('validate_salary', 'validate_duplicates')
 
     def __init__(self, 
+                 ctx: Any = None,
                  driver_managers: Dict[str, DriverManager] = None, 
                  extension_managers: Dict[str, NamedExtensionManager] = None,
                  use_defaults: bool = False):
         """Creates GeneticAlgorithm instance
 
         Args:
+            ctx (dict): the context dict [or object]
             driver_managers (dict): key is namespace, value is DriverManager
             extension_managers (dict): key is namespace, value is NamedExtensionManager
             use_defaults (bool): use default plugins
@@ -40,6 +42,9 @@ class GeneticAlgorithm:
 
         """
         logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+        # add context
+        self.ctx = ctx
 
         # add driver/extension managers
         self.driver_managers = driver_managers if driver_managers else {}
@@ -180,16 +185,10 @@ class GeneticAlgorithm:
 
     def optimize(self, 
                *,
-               ctx: Any = None,
-               driver_managers: Dict[str, DriverManager] = None, 
-               extension_managers: Dict[str, NamedExtensionManager] = None,
-               **kwargs) -> np.ndarray:
+               **kwargs) -> Dict[str, Any]:
         """Optimizes population
 
         Args:
-            ctx (Any): context dict or object
-            driver_managers (Dict[str, DriverManager]): plugin driver managers
-            extension_managers (Dict[str, NamedExtensionManager]): plugin extension managers
             **kwargs: Keyword arguments for plugins (other than default)
 
         Returns:
