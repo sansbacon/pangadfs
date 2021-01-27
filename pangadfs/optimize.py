@@ -6,6 +6,8 @@
 import logging
 from typing import Any, Dict
 
+import numpy as np
+
 from pangadfs.base import OptimizeBase
 from pangadfs.ga import GeneticAlgorithm
 
@@ -148,7 +150,6 @@ class OptimizeDefault(OptimizeBase):
                 logging.info(f'Lineup unimproved {n_unimproved} times')
 
         # FINALIZE RESULTS
-        # show best score and lineup at conclusion
         # will break after n_generations or when stop_criteria reached
         return {
             'population': population,

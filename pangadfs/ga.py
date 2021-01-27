@@ -184,8 +184,7 @@ class GeneticAlgorithm:
                 continue
 
     def optimize(self, 
-               *,
-               **kwargs) -> Dict[str, Any]:
+                 **kwargs) -> Dict[str, Any]:
         """Optimizes population
 
         Args:
