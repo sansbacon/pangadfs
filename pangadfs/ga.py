@@ -5,7 +5,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, Union
 
 import numpy as np
 import pandas as pd
@@ -25,14 +25,14 @@ class GeneticAlgorithm:
     VALIDATE_PLUGINS = ('validate_salary', 'validate_duplicates')
 
     def __init__(self, 
-                 ctx: Any = None,
+                 ctx: Union[Dict, Any] = None,
                  driver_managers: Dict[str, DriverManager] = None, 
                  extension_managers: Dict[str, NamedExtensionManager] = None,
                  use_defaults: bool = False):
         """Creates GeneticAlgorithm instance
 
         Args:
-            ctx (dict): the context dict [or object]
+            ctx (dict): the context dict, AppConfig object, or other configuration scheme
             driver_managers (dict): key is namespace, value is DriverManager
             extension_managers (dict): key is namespace, value is NamedExtensionManager
             use_defaults (bool): use default plugins
@@ -195,8 +195,9 @@ class GeneticAlgorithm:
 
         """
         # combine keyword arguments with **kwargs
+        # need to figure out best way to pass ga to optimize
         params = locals().copy()
-        params.pop('self', None)
+        params['ga'] = params.pop('self', None)
         kwargs = params.pop('kwargs')
 
         # if there is a driver, then use it and run once

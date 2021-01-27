@@ -39,10 +39,10 @@ nav:
     - fitness: fitness-reference.md
     - misc: misc-reference.md
     - mutate: mutate-reference.md
+    - optimize: optimize-reference.md
     - penalty: penalty-reference.md
     - pool: pool-reference.md
     - populate: populate-reference.md
     - pospool: pospool-reference.md
-    - postprocess: postprocess-reference.md
     - select: select-reference.md
     - validate: validate-reference.md

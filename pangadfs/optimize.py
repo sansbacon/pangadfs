@@ -14,17 +14,11 @@ from pangadfs.ga import GeneticAlgorithm
 
 class OptimizeDefault(OptimizeBase):
 
-    def optimize(self, 
-            *,
-            ctx: Dict[str, Any],
-            ga: GeneticAlgorithm,
-            **kwargs
-            ) -> Dict[str, Any]:
+    def optimize(self, ga: GeneticAlgorithm, **kwargs) -> Dict[str, Any]:
         """Creates initial pool
         
         Args:
-            ctx (Dict[str, Any]): the context dict
-            ga (GeneticAlgorithm): GeneticAlgorithm instance
+            ga (GeneticAlgorithm): the ga instance
             **kwargs: keyword arguments for plugins
             
         Returns:
@@ -34,30 +28,30 @@ class OptimizeDefault(OptimizeBase):
             'best_lineup': pd.DataFrame,
             'best_score': float
 
-        """      
+        """
         # create pool and pospool
         # pospool used to generate initial population
         # is a dict of position_name: DataFrame
-        pop_size = ctx['ga_settings']['population_size']
-        pool = ga.pool(csvpth=ctx['ga_settings']['csvpth'])
-        cmap = {'points': ctx['ga_settings']['points_column'],
-                'position': ctx['ga_settings']['position_column'],
-                'salary': ctx['ga_settings']['salary_column']}
-        posfilter = ctx['site_settings']['posfilter']
-        flex_positions = ctx['site_settings']['flex_positions']
+        pop_size = ga.ctx['ga_settings']['population_size']
+        pool = ga.pool(csvpth=ga.ctx['ga_settings']['csvpth'])
+        cmap = {'points': ga.ctx['ga_settings']['points_column'],
+                'position': ga.ctx['ga_settings']['position_column'],
+                'salary': ga.ctx['ga_settings']['salary_column']}
+        posfilter = ga.ctx['site_settings']['posfilter']
+        flex_positions = ga.ctx['site_settings']['flex_positions']
         pospool = ga.pospool(pool=pool, posfilter=posfilter, column_mapping=cmap, flex_positions=flex_positions)
 
         # create salary and points arrays
         # these match indices of pool
-        cmap = {'points': ctx['ga_settings']['points_column'],
-                'salary': ctx['ga_settings']['salary_column']}
+        cmap = {'points': ga.ctx['ga_settings']['points_column'],
+                'salary': ga.ctx['ga_settings']['salary_column']}
         points = pool[cmap['points']].values
         salaries = pool[cmap['salary']].values
         
         # create initial population
         initial_population = ga.populate(
             pospool=pospool, 
-            posmap=ctx['site_settings']['posmap'], 
+            posmap=ga.ctx['site_settings']['posmap'], 
             population_size=pop_size
         )
 
@@ -67,7 +61,7 @@ class OptimizeDefault(OptimizeBase):
         initial_population = ga.validate(
             population=initial_population, 
             salaries=salaries,
-            salary_cap=ctx['site_settings']['salary_cap']
+            salary_cap=ga.ctx['site_settings']['salary_cap']
         )
 
         # need fitness to determine best lineup
@@ -86,14 +80,14 @@ class OptimizeDefault(OptimizeBase):
         n_unimproved = 0
         population = initial_population.copy()
 
-        for i in range(1, ctx['ga_settings']['n_generations'] + 1):
+        for i in range(1, ga.ctx['ga_settings']['n_generations'] + 1):
 
             # end program after n generations if not improving
-            if n_unimproved == ctx['ga_settings']['stop_criteria']:
+            if n_unimproved == ga.ctx['ga_settings']['stop_criteria']:
                 break
 
             # display progress information with verbose parameter
-            if ctx['ga_settings'].get('verbose'):
+            if ga.ctx['ga_settings'].get('verbose'):
                 logging.info(f'Starting generation {i}')
                 logging.info(f'Best lineup score {best_fitness}')
 
@@ -103,33 +97,33 @@ class OptimizeDefault(OptimizeBase):
             elite = ga.select(
                 population=population, 
                 population_fitness=population_fitness, 
-                n=len(population) // ctx['ga_settings'].get('elite_divisor', 5),
-                method=ctx['ga_settings'].get('elite_method', 'fittest')
+                n=len(population) // ga.ctx['ga_settings'].get('elite_divisor', 5),
+                method=ga.ctx['ga_settings'].get('elite_method', 'fittest')
             )
 
             selected = ga.select(
                 population=population, 
                 population_fitness=population_fitness, 
                 n=len(population),
-                method=ctx['ga_settings'].get('select_method', 'roulette')
+                method=ga.ctx['ga_settings'].get('select_method', 'roulette')
             )
 
             # cross over the population
             # here, we use uniform crossover, which splits the population
             # and randomly exchanges 0 - all chromosomes
-            crossed_over = ga.crossover(population=selected, method=ctx['ga_settings'].get('crossover_method', 'uniform'))
+            crossed_over = ga.crossover(population=selected, method=ga.ctx['ga_settings'].get('crossover_method', 'uniform'))
 
             # mutate the crossed over population (leave elite alone)
             # can use fixed rate or variable to reduce mutation over generations
             # here we use a variable rate that increases if no improvement is found
-            mutation_rate = ctx['ga_settings'].get('mutation_rate', max(.05, n_unimproved / 50))
+            mutation_rate = ga.ctx['ga_settings'].get('mutation_rate', max(.05, n_unimproved / 50))
             mutated = ga.mutate(population=crossed_over, mutation_rate=mutation_rate)
 
             # validate the population (elite + mutated)
             population = ga.validate(
                 population=np.vstack((elite, mutated)), 
                 salaries=salaries, 
-                salary_cap=ctx['site_settings']['salary_cap']
+                salary_cap=ga.ctx['site_settings']['salary_cap']
             )
             
             # assess fitness and get the best score
