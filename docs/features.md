@@ -1,22 +1,11 @@
-# Features
+# Optimizing with Genetic Algorithms
 
-pangadfs is a pandas-based genetic algorithm library for daily fantasy optimization (currently NFL only). pangadfs is extensible by design and is motivated by difficulties I encountered with other optimizers, which tend to have a monolithic design and don't make it easy to swap out components. 
-
-This flexibility is made possible by the [stevedore plugin system](https://docs.openstack.org/stevedore/latest/ "Stevedore plugins"), which allows allow applications to customize one or more of the internal components. As recommended by [the stevedore documentation](https://docs.openstack.org/stevedore/latest/user/tutorial/creating_plugins.html#a-plugin-base-class "Stevedore documentation"), the [base module](base-reference.md) includes base classes to define each pluggable component. Each namespace has a default implementation (crossover, fitness, mutate, select, and so forth), which, collectively, provide a fully-functional implementation of a genetic algorithm.
-
-
-## Optimizing with Genetic Algorithms
-
-In principle, a population of individuals selected from the search space , often in a
-random manner, serves as candidate solutions to optimize the problem [3]. The
-individuals in this population are evaluated through ( "fitness" ) adaptation function.
-A selection mechanism is then used to select individuals to be used as parents to
-those of the next generation. These individuals will then be crossed and mutated to
-form the new offspring. The next generation is finally formed by an alternative
-mechanism between parents and their offspring [4]. This process is repeated until a
-certain satisfaction condition.
+## Basics of Genetic Algorithms
+In principle, a population of individuals selected from the search space , often in a random manner, serves as candidate solutions to optimize the problem. The individuals in this population are evaluated through ( "fitness" ) adaptation function. A selection mechanism is then used to select individuals to be used as parents to those of the next generation. These individuals will then be crossed and mutated to form the new offspring. The next generation is finally formed by an alternative mechanism between parents and their offspring. This process is repeated until a certain satisfaction condition.
 
 Genetic algorithms maintain a population of candidate solutions, called individuals, for that given problem. These candidate solutions are iteratively evaluated and combined to create a new generation of solutions. Individuals with higher fitness (rated as better at solving the relevant problem) have a greater chance of being selected and passing their qualities to the next generation of candidate solutions This way, as generations go by, candidate solutions get better at solving the problem at hand.
+
+## Optimizing Lineups with Genetic Algorithms
 
 Applied to the context of daily fantasy lineups, a genetic algorithm works as follows:
 
@@ -42,6 +31,6 @@ Applied to the context of daily fantasy lineups, a genetic algorithm works as fo
 
 * Repeat for n generations (or until specified stop point, such as no improvement for 5 generations)
 
-## Strengths and Weaknesses of Genetic Algorithms
+## Using Penalties Instead of Constraints
 
-* Individuals (lineups) are cheap
+pangadfs allows the use of penalties rather than constraints.

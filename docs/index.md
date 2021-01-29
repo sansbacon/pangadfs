@@ -208,6 +208,14 @@ Lineup score: 156.5
 ```
 </div>
 
+## Extensibility
+
+pangadfs is extensible by design and is motivated by difficulties I encountered with other optimizers, which tend to have a monolithic design and don't make it easy to swap out components. 
+
+This flexibility is made possible by the [stevedore plugin system](https://docs.openstack.org/stevedore/latest/ "Stevedore plugins"), which allows allow applications to customize one or more of the internal components. 
+
+As recommended by [the stevedore documentation](https://docs.openstack.org/stevedore/latest/user/tutorial/creating_plugins.html#a-plugin-base-class "Stevedore documentation"), the [base module](base-reference.md) includes base classes to define each pluggable component. Each namespace has a default implementation (crossover, fitness, mutate, select, and so forth), which, collectively, provide a fully-functional implementation of a genetic algorithm.
+
 ## License
 
 This project is licensed under the terms of the MIT license.

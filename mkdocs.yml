@@ -23,14 +23,13 @@ markdown_extensions:
 
 nav:
 - pangadfs: index.md
-- features.md
 - history-design-future.md
-- contraints-penalties.md
-- userguide.md
+- features.md
 - Developing pangadfs apps and plugins:
+    - building-apps.md
     - plugin-namespaces.md
     - default-plugins.md
-    - building-apps.md
+    - building-plugins.md
     - contributing.md
 - release-notes.md
 - Code Reference:
@@ -39,10 +38,10 @@ nav:
     - fitness: fitness-reference.md
     - misc: misc-reference.md
     - mutate: mutate-reference.md
+    - optimize: optimize-reference.md
     - penalty: penalty-reference.md
     - pool: pool-reference.md
     - populate: populate-reference.md
     - pospool: pospool-reference.md
-    - postprocess: postprocess-reference.md
     - select: select-reference.md
     - validate: validate-reference.md
