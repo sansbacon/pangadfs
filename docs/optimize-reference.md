@@ -1,1 +1,1 @@
-::: pangadfs.postprocess
+::: pangadfs.optimize

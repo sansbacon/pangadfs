@@ -5,10 +5,11 @@
 
 import logging
 from pathlib import Path
-from typing import Dict, Iterable
+from typing import Any, Dict, Iterable, Union
 
 import numpy as np
 import pandas as pd
+
 from stevedore.driver import DriverManager
 from stevedore.named import NamedExtensionManager
 
@@ -17,19 +18,21 @@ class GeneticAlgorithm:
     """Handles coordination of genetic algorithm plugins"""
 
     PLUGIN_NAMESPACES = (
-       'pool', 'pospool', 'populate', 'fitness', 
+       'pool', 'pospool', 'populate', 'fitness', 'optimize',
        'select', 'crossover', 'mutate', 'validate'
     )
 
     VALIDATE_PLUGINS = ('validate_salary', 'validate_duplicates')
 
     def __init__(self, 
+                 ctx: Union[Dict, Any] = None,
                  driver_managers: Dict[str, DriverManager] = None, 
                  extension_managers: Dict[str, NamedExtensionManager] = None,
                  use_defaults: bool = False):
         """Creates GeneticAlgorithm instance
 
         Args:
+            ctx (dict): the context dict, AppConfig object, or other configuration scheme
             driver_managers (dict): key is namespace, value is DriverManager
             extension_managers (dict): key is namespace, value is NamedExtensionManager
             use_defaults (bool): use default plugins
@@ -39,6 +42,9 @@ class GeneticAlgorithm:
 
         """
         logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+        # add context
+        self.ctx = ctx
 
         # add driver/extension managers
         self.driver_managers = driver_managers if driver_managers else {}
@@ -177,6 +183,34 @@ class GeneticAlgorithm:
             except:
                 continue
 
+    def optimize(self, 
+                 **kwargs) -> Dict[str, Any]:
+        """Optimizes population
+
+        Args:
+            **kwargs: Keyword arguments for plugins (other than default)
+
+        Returns:
+            dict
+
+        """
+        # combine keyword arguments with **kwargs
+        # need to figure out best way to pass ga to optimize
+        params = locals().copy()
+        params['ga'] = params.pop('self', None)
+        kwargs = params.pop('kwargs')
+
+        # if there is a driver, then use it and run once
+        if mgr := self.driver_managers.get('optimize'):
+            return mgr.driver.optimize(**params, **kwargs)
+
+        # otherwise, optimize with first valid plugin
+        for ext in self.extension_managers['optimize'].extensions:
+            try:
+                return ext.obj.optimize(**params, **kwargs)
+            except:
+                continue
+            
     def pool(self, *, csvpth: Path = None, **kwargs) -> pd.DataFrame:
         """Creates pool of players.
 

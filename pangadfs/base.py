@@ -40,6 +40,17 @@ class MutateBase(metaclass=abc.ABCMeta):
         """Mutates population at given mutation rate."""
 
 
+class OptimizeBase(metaclass=abc.ABCMeta):
+    """Base class for optimize plugins."""
+
+    def __init__(self):
+        logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+    @abc.abstractmethod
+    def optimize(self, *args, **kwargs):
+        """Implements optimize."""
+
+
 class PenaltyBase(metaclass=abc.ABCMeta):
     """Base class for penalty plugins."""
 

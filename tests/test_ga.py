@@ -3,7 +3,6 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the MIT License
 
-import os
 from pathlib import Path
 import random
 
@@ -12,7 +11,7 @@ import pandas as pd
 import pytest
 from stevedore import driver, named
 
-from pangadfs import GeneticAlgorithm
+from pangadfs.ga import GeneticAlgorithm
 
 
 @pytest.fixture
@@ -83,7 +82,7 @@ def pop(pp, pm, ga):
 
 @pytest.fixture
 def pp(p, pf, ga, ctx):
-    return ga.pospool(ctx=ctx, pool=p, posfilter=pf, column_mapping={})    
+    return ga.pospool(ctx=ctx, pool=p, posfilter=pf, column_mapping={}, flex_positions=('RB', 'WR', 'TE'))    
 
 
 @pytest.fixture
@@ -101,8 +100,6 @@ def test_init(ctx, dms, ems, tprint):
     assert obj is not None
     obj = GeneticAlgorithm(ctx=ctx, driver_managers=None, extension_managers=ems)
     assert obj is not None
-    with pytest.raises(TypeError):
-        obj = GeneticAlgorithm(driver_managers=None, extension_managers=None)
 
 
 def test_pool(test_directory, ga):
@@ -112,9 +109,9 @@ def test_pool(test_directory, ga):
     assert not pool.empty
 
 
-def test_pospool(p, pf, ga):
+def test_pospool(p, pf, ga, tprint):
     pospool = ga.pospool(
-      pool=p, posfilter=pf, column_mapping={} 
+      pool=p, posfilter=pf, column_mapping={}, flex_positions=('RB', 'WR', 'TE')
     )
     assert isinstance (pospool, dict)
     key = random.choice(list(pospool.keys()))
@@ -164,7 +161,7 @@ def test_crossover(p, pop, ga):
 
 
 def test_mutate(pop, ga):
-    mpop = ga.mutate(population=pop)
+    mpop = ga.mutate(population=pop, mutation_rate=.05)
     assert pop.shape == mpop.shape
     assert not np.array_equal(pop, mpop)
 
