@@ -33,4 +33,4 @@ Applied to the context of daily fantasy lineups, a genetic algorithm works as fo
 
 ## Using Penalties Instead of Constraints
 
-pangadfs allows the use of penalties rather than constraints.
+pangadfs allows the use of penalties rather than constraints. The intuition here is that you can nudge the optimizer toward a certain goal (lineup diversity, stacks, etc.) without creating arbitrary rules that may exclude the truly-optimal solutions.

@@ -26,7 +26,6 @@ nav:
 - history-design-future.md
 - features.md
 - Developing pangadfs apps and plugins:
-    - building-apps.md
     - plugin-namespaces.md
     - default-plugins.md
     - building-plugins.md

@@ -57,3 +57,8 @@ Ensures lineup does not exceed salary cap.
 ## DuplicatesValidate
 
 Ensures lineup does not have duplicate players and that all lineups are unique.
+
+
+## Default Optimize
+
+Handles the basic optimization loop, coordinates pieces of genetic algorithm.
