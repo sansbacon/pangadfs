@@ -1,4 +1,4 @@
-![pangadfs](img/pangadfs.png)
+![pangadfs](docs/img/pangadfs.png)
 
 pangadfs is a pandas-based (python) genetic algorithm framework for fantasy sports. It uses a plugin architecture to enable maximum flexibility while also providing a fully-functional implementation of a genetic algorithm for lineup optimization.
 
