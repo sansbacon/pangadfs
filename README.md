@@ -42,17 +42,34 @@ $ pip install pangadfs
 
 ### Create It
 
-A simple pangadfs optimizer could look like the following
+A simple pangadfs optimizer app could look like the following
 
 ```Python
-from pathlib import Path
-from pangadfs import GeneticAlgorithm
+# pangadfs/app/app.py
 
+from pangadfs.ga import GeneticAlgorithm
+from pathlib import Path
+
+import numpy as np
+from stevedore.driver import DriverManager
+from stevedore.named import NamedExtensionManager
+
+
+def run():
+	"""Example optimizer application using pangadfs"""
 	ctx = {
 		'ga_settings': {
-			'csvpth': Path(__file__).parent.parent / 'appdata' / 'pool.csv',
+			'crossover_method': 'uniform',
+			'csvpth': Path(__file__).parent / 'appdata' / 'pool.csv',
+			'elite_divisor': 5,
+			'elite_method': 'fittest',
+			'mutation_rate': .05,
 			'n_generations': 20,
+			'points_column': 'proj',
 			'population_size': 30000,
+			'position_column': 'pos',
+			'salary_column': 'salary',
+			'select_method': 'roulette',
 			'stop_criteria': 10,
 			'verbose': True
 		},
@@ -66,109 +83,39 @@ from pangadfs import GeneticAlgorithm
 		}
 	}
 
-	# set up GeneticAlgorithm object
-	ga = GeneticAlgorithm()
-	
-	# create pool and pospool
-	pop_size = ctx['ga_settings']['population_size']
-	pool = ga.pool(csvpth=ctx['ga_settings']['csvpth'])
-	posfilter = ctx['site_settings']['posfilter']
-	flex_positions = ctx['site_settings']['flex_positions']
-	pospool = ga.pospool(pool=pool, posfilter=posfilter, column_mapping={}, flex_positions=flex_positions)
-
-	# create salary and points arrays
-	points = pool[cmap['proj']].values
-	salaries = pool[cmap['salary']].values
-	
-	# create initial population
-	initial_population = ga.populate(
-		pospool=pospool, 
-		posmap=ctx['site_settings']['posmap'], 
-		population_size=pop_size
-	)
-
-	# apply validators (default are salary and duplicates)
-	initial_population = ga.validate(
-		population=initial_population, 
-		salaries=salaries,
-		salary_cap=ctx['site_settings']['salary_cap']
-	)
-
-	population_fitness = ga.fitness(
-		population=initial_population, 
-		points=points
-	)
-
-	# set overall_max based on initial population
-	omidx = population_fitness.argmax()
-	best_fitness = population_fitness[omidx]
-	best_lineup = initial_population[omidx]
-
-	# create new generations
-	n_unimproved = 0
-	population = initial_population.copy()
-
-	for i in range(1, ctx['ga_settings']['n_generations'] + 1):
-
-		# end program after n generations if not improving
-		if n_unimproved == ctx['ga_settings']['stop_criteria']:
-			break
-
-		# display progress information with verbose parameter
-		if ctx['ga_settings'].get('verbose'):
-			logging.info(f'Starting generation {i}')
-			logging.info(f'Best lineup score {best_fitness}')
-
-		# select the population
-		# here, we are holding back the fittest 20% to ensure
-		# that crossover and mutation do not overwrite good individuals
-		elite = ga.select(
-			population=population, 
-			population_fitness=population_fitness, 
-			n=len(population) // ctx['ga_settings'].get('elite_divisor', 5),
-			method='fittest'
-		)
-
-		selected = ga.select(
-			population=population, 
-			population_fitness=population_fitness, 
-			n=len(population),
-			method='roulette'
-		)
-
-		# cross over the population
-		crossed_over = ga.crossover(population=selected, method='uniform')
-
-		# mutate the crossed over population (leave elite alone)
-		mutated = ga.mutate(population=crossed_over, mutation_rate=.05)
-
-		# validate the population (elite + mutated)
-		population = ga.validate(
-			population=np.vstack((elite, mutated)), 
-			salaries=salaries, 
-			salary_cap=ctx['site_settings']['salary_cap']
-		)
-		
-		# assess fitness and get the best score
-		population_fitness = ga.fitness(population=population, points=points)
-		omidx = population_fitness.argmax()
-		generation_max = population_fitness[omidx]
-	
-		# if new best score, then set n_unimproved to 0
-		# and save the new best score and lineup
-		# otherwise increment n_unimproved
-		if generation_max > best_fitness:
-			logging.info(f'Lineup improved to {generation_max}')
-			best_fitness = generation_max
-			best_lineup = population[omidx]
-			n_unimproved = 0
+	# set up driver managers
+	dmgrs = {}
+	emgrs = {}
+	for ns in GeneticAlgorithm.PLUGIN_NAMESPACES:
+		pns = f'pangadfs.{ns}'
+		if ns == 'validate':
+			emgrs['validate'] = NamedExtensionManager(
+				namespace=pns, 
+				names=['validate_salary', 'validate_duplicates'], 
+				invoke_on_load=True, 
+				name_order=True)
 		else:
-			n_unimproved += 1
-			logging.info(f'Lineup unimproved {n_unimproved} times')
+			dmgrs[ns] = DriverManager(
+				namespace=pns, 
+				name=f'{ns}_default', 
+				invoke_on_load=True)
+	
+	
+	# set up GeneticAlgorithm object
+	ga = GeneticAlgorithm(ctx=ctx, driver_managers=dmgrs, extension_managers=emgrs)
+	
+	# run optimizer
+	results = ga.optimize()
 
 	# show best score and lineup at conclusion
-	print(pool.loc[best_lineup, :])
-	print(f'Lineup score: {best_fitness}')
+	# will break after n_generations or when stop_criteria reached
+	print(results['best_lineup'])
+	print(f'Lineup score: {results["best_score"]}')
+	
+
+if __name__ == '__main__':
+	run()
+
 ```
 
 ### Run it
@@ -178,7 +125,7 @@ Run the sample application with:
 <div class="termy">
 
 ```console
-$ basicapp
+$ python {pangadfs_directory}/app/app.py
 
 INFO:root:Starting generation 1
 INFO:root:Best lineup score 153.00000000000003
