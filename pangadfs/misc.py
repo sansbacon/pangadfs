@@ -39,7 +39,7 @@ def exposure(population: np.ndarray = None) -> Dict[int, int]:
 
     """
     flat = population.flatten
-    return {id: size for id, size in zip(flat, np.bincount(flat)[flat])}
+    return dict(zip(flat, np.bincount(flat)[flat]))
 
 
 def multidimensional_shifting(elements: Iterable, 
