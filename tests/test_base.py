@@ -44,34 +44,34 @@ class Validate(ValidateBase):
 
 def test_crossover_base():
     with pytest.raises(TypeError):
-        obj = Crossover()    
+        Crossover()    
 
 
 def test_fitness_base():
     with pytest.raises(TypeError):
-        obj = Fitness()
+        Fitness()
 
 
 def test_mutate_base():
     with pytest.raises(TypeError):
-        obj = Mutate()
+        Mutate()
 
 
 def test_populate_base():
     with pytest.raises(TypeError):
-        obj = Populate()
+        Populate()
 
 
 def test_pool_base():
     with pytest.raises(TypeError):
-        obj = Pool()
+        Pool()
 
 
 def test_pospool_base():
     with pytest.raises(TypeError):
-        obj = Pospool()
+        Pospool()
 
 
 def test_validate_base():
     with pytest.raises(TypeError):
-        obj = Validate()
+        Validate()

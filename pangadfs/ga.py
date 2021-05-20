@@ -89,6 +89,9 @@ class GeneticAlgorithm:
             np.ndarray: the crossed-over population
 
         """
+        logging.debug('{} {}'.format(population, agg))
+
+
         # combine keyword arguments with **kwargs
         params = locals().copy()
         params.pop('self', None)
@@ -135,6 +138,8 @@ class GeneticAlgorithm:
             np.ndarray: population fitness as 1D array of float
 
         """
+        logging.debug('{} {}'.format(population, points))
+
         # combine keyword arguments with **kwargs
         params = locals().copy()
         params.pop('self', None)
@@ -167,6 +172,8 @@ class GeneticAlgorithm:
             np.ndarray: same shape and dtype as population
 
         """
+        logging.debug('{} {} {} {}'.format(population, mutation_rate))
+
         # combine keyword arguments with **kwargs
         params = locals().copy()
         params.pop('self', None)
@@ -257,6 +264,8 @@ class GeneticAlgorithm:
             np.ndarray: the population
 
         """
+        logging.debug('{} {} {} {}'.format(pospool, posmap, population_size, probcol))
+
         # combine keyword arguments with **kwargs
         params = locals().copy()
         params.pop('self', None)
@@ -304,6 +313,8 @@ class GeneticAlgorithm:
             Dict[str, pd.DataFrame] where keys == posfilter.keys
 
         """
+        logging.debug('{} {} {} {}'.format(pool, posfilter, column_mapping, flex_positions))
+
         # combine keyword arguments with **kwargs
         params = locals().copy()
         params.pop('self', None)
@@ -339,6 +350,9 @@ class GeneticAlgorithm:
             np.ndarray: population fitness as 1D array of float
 
         """
+        logging.debug('Selection method {}, n is {}'.format(method, n))
+        logging.debug('Pop size {}, fitness {}'.format(len(population), population_fitness.mean()))
+
         # combine keyword arguments with **kwargs
         params = locals().copy()
         params.pop('self', None)
@@ -371,6 +385,8 @@ class GeneticAlgorithm:
             np.ndarray: same width and dtype as population. Likely less rows due to exclusions.
             
         """
+        logging.debug(f'Salaries {salaries}')
+
         # combine keyword arguments with **kwargs
         params = locals().copy()
         params.pop('self', None)

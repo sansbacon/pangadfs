@@ -93,7 +93,7 @@ def site_settings():
     }
 
 
-def test_init(ctx, dms, ems, tprint):
+def test_init(ctx, dms, ems):
     obj = GeneticAlgorithm(ctx=ctx, driver_managers=dms, extension_managers=ems)
     assert obj is not None
     obj = GeneticAlgorithm(ctx=ctx, driver_managers=dms, extension_managers=None)
@@ -109,7 +109,7 @@ def test_pool(test_directory, ga):
     assert not pool.empty
 
 
-def test_pospool(p, pf, ga, tprint):
+def test_pospool(p, pf, ga):
     pospool = ga.pospool(
       pool=p, posfilter=pf, column_mapping={}, flex_positions=('RB', 'WR', 'TE')
     )
@@ -154,7 +154,6 @@ def test_select(p, pop, ga):
 
 def test_crossover(p, pop, ga):
     points = p['proj'].values
-    popfit = ga.fitness(population=pop, points=points)  
     newpop = ga.crossover(population=pop, method='uniform')
     assert isinstance(newpop, np.ndarray)
     assert newpop.dtype == 'int64'

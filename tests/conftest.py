@@ -1,3 +1,8 @@
+# pangadfs/tests/conftest.py
+# -*- coding: utf-8 -*-
+# Copyright (C) 2020 Eric Truett
+# Licensed under the MIT License
+
 from pathlib import Path
 import sys
 
@@ -8,12 +13,6 @@ sys.path.append("../pangadfs")
 from pangadfs.pool import *
 from pangadfs.pospool import *
 from pangadfs.populate import *
-
-
-@pytest.fixture
-def p(test_directory):
-    csvpth = test_directory / 'test_pool.csv'
-    return PoolDefault().pool(csvpth=csvpth)
 
 
 @pytest.fixture
@@ -63,3 +62,8 @@ def tprint(request, capsys):
         for line in lines:
             sys.stdout.write("\n{}".format(line))
 
+
+@pytest.fixture
+def p(test_directory):
+    csvpth = test_directory / 'test_pool.csv'
+    return PoolDefault().pool(csvpth=csvpth)

@@ -1,4 +1,4 @@
-# pangadfs/tests/test_default.py
+# pangadfs/tests/test_select.py
 # -*- coding: utf-8 -*-
 # Copyright (C) 2020 Eric Truett
 # Licensed under the MIT License
@@ -10,7 +10,7 @@ from pangadfs.select import SelectDefault
 from pangadfs.fitness import FitnessDefault
 
 
-def test_select_default(p, pop, tprint):
+def test_select_default(p, pop):
     points = p['proj'].values
     fitness = FitnessDefault().fitness(
       population=pop, points=points
@@ -23,7 +23,6 @@ def test_select_default(p, pop, tprint):
     }
 
     for method in ('roulette', 'sus', 'scaled', 'rank', 'tournament'):
-        tprint(method)
         newparams = {**params, **{'method': method}}
         newpop = SelectDefault().select(**newparams)
         assert isinstance(newpop, np.ndarray)

@@ -9,7 +9,7 @@ import pytest
 from pangadfs.populate import *
 
 
-def test_populate_default(pp, pm, tprint):
+def test_populate_default(pp, pm):
     size = 5
     population = PopulateDefault().populate(
       pospool=pp, posmap=pm, population_size=size

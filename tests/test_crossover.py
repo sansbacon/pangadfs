@@ -22,7 +22,7 @@ def test_crossover_diverse(pop):
     assert newpop.dtype == 'int64'
 
 
-def test_crossover_single_point(pop, tprint):
+def test_crossover_single_point():
     """Tests crossover single point"""
     pop2 = np.array([
         [1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -42,7 +42,7 @@ def test_crossover_single_point(pop, tprint):
     assert np.array_equal(newpop, expected)
     
 
-def test_crossover_two_point(pop):
+def test_crossover_two_point():
     """Tests crossover two point"""
     pop2 = np.array([
         [1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -63,7 +63,7 @@ def test_crossover_two_point(pop):
 
 
 @pytest.mark.skip
-def test_crossover_ox1(p, pop):
+def test_crossover_ox1(p):
     newpop = CrossoverDefault().crossover(population=p, method='ordered')
     assert isinstance(newpop, np.ndarray)
     assert newpop.dtype == 'int64'

@@ -9,7 +9,7 @@ import pytest
 from pangadfs.fitness import *
 
 
-def test_fitness_default(p, pop, tprint):
+def test_fitness_default(p, pop):
     points = p['proj'].values
     fitness = FitnessDefault().fitness(
       population=pop, points=points
