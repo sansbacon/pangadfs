@@ -24,6 +24,7 @@ def run():
         license='MIT',
         packages=find_packages(),
         entry_points={
+          'console_scripts': ['scaffold-plugin = pangadfs.scaffold_plugin:main'],
           'pangadfs.crossover': ['crossover_default = pangadfs.crossover:CrossoverDefault'],
           'pangadfs.fitness': ['fitness_default = pangadfs.fitness:FitnessDefault'],
           'pangadfs.mutate': ['mutate_default = pangadfs.mutate:MutateDefault'],
