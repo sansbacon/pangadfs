@@ -19,18 +19,39 @@ def scaffold_plugin(stage: str, plugin_name: str, base_module: str, namespace: s
     # Write plugin class file
     with open(plugin_path, "w") as f:
         f.write(textwrap.dedent(f"""
-            from {base_module}.{stage} import {stage.title()}Base
+            import logging
+            from {base_module} import {stage.title()}Base
 
             class {class_name}({stage.title()}Base):
                 \"\"\"{plugin_name} plugin for {stage} stage.\"\"\"
 
                 def __init__(self, ctx=None):
-                    super().__init__()
-                    self.param = ctx.get('param', 0.5) if ctx else 0.5
+                    \"\"\"Initialize the plugin with optional context.
+                    
+                    Args:
+                        ctx: Optional context dictionary containing plugin configuration.
+                             Can include plugin-specific parameters.
+                    \"\"\"
+                    super().__init__(ctx)
+                    self.logger = logging.getLogger(__name__)
+                    
+                    # Example of accessing configuration from context
+                    # Replace with actual parameters needed for your plugin
+                    self.param = 0.5  # Default value
+                    if self.ctx and 'param' in self.ctx:
+                        self.param = self.ctx['param']
 
                 def {stage}(self, *args, **kwargs):
-                    \"\"\"Your implementation goes here.\"\"\"
+                    \"\"\"Your implementation goes here.
+                    
+                    This method should implement the functionality for the {stage} stage.
+                    The parameters will depend on the specific stage.
+                    
+                    Returns:
+                        The result of the {stage} operation.
+                    \"\"\"
                     self.logger.info("Running {plugin_name} plugin.")
+                    # Example implementation - replace with actual code
                     return args[0]  # placeholder
         """))
 

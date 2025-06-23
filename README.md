@@ -14,6 +14,7 @@ The key pangadfs features are:
 
 * **Fast**: takes advantage of pandas and numpy to generate thousands of lineups quickly.
 * **Extensible**: any desired functionality can be added with a straightforward plugin architecture.
+* **Configurable**: plugins can be configured via context, allowing for easy customization without modifying code.
 * **Pythonic**: library is easy to use and extend as long as you are familiar with data analysis in python (pandas and numpy). You don't also have to be an expert in linear programming.
 * **Fewer bugs**: Small core means fewer bugs and easier to trace code. Unlike other optimizers, pangadfs does not generate complicated equations behind the curtain that are difficult to comprehend and debug.
 
@@ -155,13 +156,29 @@ Lineup score: 156.5
 ```
 </div>
 
-## Extensibility
+## Extensibility and Configuration
 
 pangadfs is extensible by design and is motivated by difficulties I encountered with other optimizers, which tend to have a monolithic design and don't make it easy to swap out components. 
 
 This flexibility is made possible by the [stevedore plugin system](https://docs.openstack.org/stevedore/latest/ "Stevedore plugins"), which allows allow applications to customize one or more of the internal components. 
 
 As recommended by [the stevedore documentation](https://docs.openstack.org/stevedore/latest/user/tutorial/creating_plugins.html#a-plugin-base-class "Stevedore documentation"), the [base module](base-reference.md) includes base classes to define each pluggable component. Each namespace has a default implementation (crossover, fitness, mutate, select, and so forth), which, collectively, provide a fully-functional implementation of a genetic algorithm.
+
+### Plugin Configuration via Context
+
+Plugins can be configured via the context dictionary passed to the GeneticAlgorithm constructor. This allows for easy customization of plugin behavior without modifying the plugin code. For example, you can configure the mutation rate for the mutate plugin:
+
+```python
+ctx = {
+    'mutation_rate': 0.15,  # Configure mutation rate for the mutate plugin
+    'fitness_scale': 1.2,   # Configure fitness scale for the fitness plugin
+    # Other configuration parameters
+}
+
+ga = GeneticAlgorithm(ctx=ctx, use_defaults=True)
+```
+
+See the [building plugins documentation](docs/building-plugins.md) for more details on how to use context for plugin configuration.
 
 ## License
 
