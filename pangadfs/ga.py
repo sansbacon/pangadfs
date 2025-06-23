@@ -399,3 +399,30 @@ class GeneticAlgorithm:
             params['population'] = population
             population = ext.obj.validate(**params, **kwargs)
         return population
+        
+        
+class GeneticAlgorithmImproved:
+    """Handles coordination of genetic algorithm 
+    
+    def run(self, population: list, generations: int):
+        fitness_fn = self.get_plugin("fitness")
+        select_fn = self.get_plugin("select")
+        mutate_fn = self.get_plugin("mutate")
+        crossover_fn = self.get_plugin("crossover")
+    
+        for _ in range(generations):
+            fitness_scores = [fitness_fn.evaluate(ind) for ind in population]
+            selected = select_fn.select(population, fitness_scores)
+            offspring = crossover_fn.crossover(selected)
+            population = mutate_fn.mutate(offspring)
+    
+        return population
+        
+    
+    def list_available_plugins(namespace: str):
+        from stevedore import ExtensionManager
+        mgr = ExtensionManager(namespace=namespace, invoke_on_load=False)
+        return [ext.name for ext in mgr.extensions]
+    
+    
+    
