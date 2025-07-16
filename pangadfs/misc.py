@@ -94,8 +94,8 @@ def multidimensional_shifting(elements: Iterable,
     random_shifts /= random_shifts.sum(axis=1)[:, np.newaxis]
     shifted_probabilities = random_shifts - replicated_probabilities
     samples = np.argpartition(shifted_probabilities, sample_size, axis=1)[:, :sample_size]
-    return elements.to_numpy()[import numpy as import numpy as np
-
+    return elements.to_numpy()
+        
 
 def multidimensional_shifting_fast(
     num_samples: int,
