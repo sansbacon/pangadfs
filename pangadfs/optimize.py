@@ -4,7 +4,7 @@
 # Licensed under the MIT License
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -175,3 +175,332 @@ class OptimizeDefault(OptimizeBase):
             results['profiling'] = ga.profiler.export_to_dict()
         
         return results
+
+
+class OptimizeMultilineup(OptimizeBase):
+
+    def optimize(self, ga: GeneticAlgorithm, **kwargs) -> Dict[str, Any]:
+        """Optimizes for multiple diverse lineups
+        
+        Args:
+            ga (GeneticAlgorithm): the ga instance
+            **kwargs: keyword arguments for plugins
+            
+        Returns:
+            Dict containing:
+            'population': np.ndarray,
+            'fitness': np.ndarray,
+            'best_lineup': pd.DataFrame,  # For backward compatibility
+            'best_score': float,          # For backward compatibility
+            'lineups': List[pd.DataFrame], # Multiple lineups
+            'scores': List[float],        # Corresponding scores
+            'diversity_metrics': Dict     # Diversity statistics
+
+        """
+        # Get multilineup settings with defaults
+        target_lineups = ga.ctx['ga_settings'].get('target_lineups', 1)
+        diversity_weight = ga.ctx['ga_settings'].get('diversity_weight', 0.3)
+        min_overlap_threshold = ga.ctx['ga_settings'].get('min_overlap_threshold', 0.3)
+        diversity_method = ga.ctx['ga_settings'].get('diversity_method', 'jaccard')
+        
+        # Start profiling
+        ga.profiler.start_optimization()
+        
+        # Create pool and pospool (same as OptimizeDefault)
+        pop_size = ga.ctx['ga_settings']['population_size']
+        pool = ga.pool(csvpth=ga.ctx['ga_settings']['csvpth'])
+        cmap = {'points': ga.ctx['ga_settings']['points_column'],
+                'position': ga.ctx['ga_settings']['position_column'],
+                'salary': ga.ctx['ga_settings']['salary_column']}
+        posfilter = ga.ctx['site_settings']['posfilter']
+        flex_positions = ga.ctx['site_settings']['flex_positions']
+        pospool = ga.pospool(pool=pool, posfilter=posfilter, column_mapping=cmap, flex_positions=flex_positions)
+
+        # Create salary and points arrays
+        cmap = {'points': ga.ctx['ga_settings']['points_column'],
+                'salary': ga.ctx['ga_settings']['salary_column']}
+        points = pool[cmap['points']].values
+        salaries = pool[cmap['salary']].values
+        
+        # Create initial population
+        initial_population = ga.populate(
+            pospool=pospool, 
+            posmap=ga.ctx['site_settings']['posmap'], 
+            population_size=pop_size
+        )
+
+        # Apply validators
+        initial_population = ga.validate(
+            population=initial_population, 
+            salaries=salaries,
+            salary_cap=ga.ctx['site_settings']['salary_cap']
+        )
+
+        # Calculate fitness
+        population_fitness = ga.fitness(
+            population=initial_population, 
+            points=points
+        )
+
+        # Set overall_max based on initial population
+        omidx = population_fitness.argmax()
+        best_fitness = population_fitness[omidx]
+        best_lineup = initial_population[omidx]
+
+        # Mark setup phase complete
+        ga.profiler.mark_setup_complete()
+        
+        # Mark initial best solution (generation 0)
+        ga.profiler.mark_best_solution(0)
+
+        # Create new generations (same GA loop as OptimizeDefault)
+        n_unimproved = 0
+        population = initial_population.copy()
+
+        for i in range(1, ga.ctx['ga_settings']['n_generations'] + 1):
+            # Start generation timing
+            ga.profiler.start_generation(i)
+
+            # End program after n generations if not improving
+            if n_unimproved == ga.ctx['ga_settings']['stop_criteria']:
+                break
+
+            # Display progress information with verbose parameter
+            if ga.ctx['ga_settings'].get('verbose'):
+                logging.info(f'Starting generation {i}')
+                logging.info(f'Best lineup score {best_fitness}')
+
+            # Select the population
+            elite = ga.select(
+                population=population, 
+                population_fitness=population_fitness, 
+                n=len(population) // ga.ctx['ga_settings'].get('elite_divisor', 5),
+                method=ga.ctx['ga_settings'].get('elite_method', 'fittest')
+            )
+
+            selected = ga.select(
+                population=population, 
+                population_fitness=population_fitness, 
+                n=len(population),
+                method=ga.ctx['ga_settings'].get('select_method', 'roulette')
+            )
+
+            # Cross over the population
+            crossed_over = ga.crossover(population=selected, method=ga.ctx['ga_settings'].get('crossover_method', 'uniform'))
+
+            # Mutate the crossed over population
+            mutation_rate = ga.ctx['ga_settings'].get('mutation_rate', max(.05, n_unimproved / 50))
+            mutated = ga.mutate(population=crossed_over, mutation_rate=mutation_rate)
+
+            # Validate the population
+            population = ga.validate(
+                population=np.vstack((elite, mutated)), 
+                salaries=salaries, 
+                salary_cap=ga.ctx['site_settings']['salary_cap']
+            )
+            
+            # Assess fitness and get the best score
+            population_fitness = ga.fitness(population=population, points=points)
+            omidx = population_fitness.argmax()
+            generation_max = population_fitness[omidx]
+        
+            # If new best score, then set n_unimproved to 0
+            if generation_max > best_fitness:
+                logging.info(f'Lineup improved to {generation_max}')
+                best_fitness = generation_max
+                best_lineup = population[omidx]
+                n_unimproved = 0
+                # Mark when best solution was found
+                ga.profiler.mark_best_solution(i)
+            else:
+                n_unimproved += 1
+                logging.info(f'Lineup unimproved {n_unimproved} times')
+            
+            # End generation timing
+            ga.profiler.end_generation()
+
+        # End profiling
+        ga.profiler.end_optimization()
+
+        # MULTILINEUP SELECTION
+        # Select diverse lineups from final population
+        if target_lineups == 1:
+            # Single lineup mode - return same structure as OptimizeDefault
+            selected_lineups = [population[omidx]]
+            selected_scores = [best_fitness]
+            diversity_metrics = {'avg_overlap': 0.0, 'min_overlap': 0.0, 'diversity_matrix': np.array([[1.0]])}
+        else:
+            # Multiple lineup mode - select diverse lineups
+            selected_lineups, selected_scores, diversity_metrics = self._select_diverse_lineups(
+                population, population_fitness, target_lineups, diversity_weight, min_overlap_threshold, diversity_method
+            )
+
+        # FINALIZE RESULTS
+        results = {
+            'population': population,
+            'fitness': population_fitness,
+            'best_lineup': pool.loc[best_lineup, :],  # Backward compatibility
+            'best_score': best_fitness,               # Backward compatibility
+            'lineups': [pool.loc[lineup, :] for lineup in selected_lineups],
+            'scores': selected_scores,
+            'diversity_metrics': diversity_metrics
+        }
+        
+        # Add profiling data to results
+        if ga.profiler.enabled:
+            results['profiling'] = ga.profiler.export_to_dict()
+        
+        return results
+
+    def _select_diverse_lineups(self, population: np.ndarray, fitness: np.ndarray, 
+                               target_count: int, diversity_weight: float, 
+                               min_overlap_threshold: float, diversity_method: str) -> tuple:
+        """
+        Select diverse lineups that balance high fitness with diversity
+        
+        Args:
+            population: Final population from GA
+            fitness: Fitness scores for population
+            target_count: Number of lineups to select
+            diversity_weight: Weight for diversity penalty (0-1)
+            min_overlap_threshold: Minimum allowed overlap between lineups
+            diversity_method: Method for calculating diversity
+            
+        Returns:
+            Tuple of (selected_lineups, selected_scores, diversity_metrics)
+        """
+        if target_count > len(population):
+            target_count = len(population)
+            logging.warning(f'Target lineups ({target_count}) exceeds population size. Using full population.')
+
+        selected_lineups = []
+        selected_indices = []
+        
+        # Start with the absolute best lineup
+        best_idx = fitness.argmax()
+        selected_lineups.append(population[best_idx])
+        selected_indices.append(best_idx)
+        
+        # Iteratively add lineups that maximize: fitness - diversity_penalty
+        for i in range(1, target_count):
+            scores = self._calculate_selection_scores(
+                population, fitness, selected_lineups, selected_indices, 
+                diversity_weight, min_overlap_threshold, diversity_method
+            )
+            
+            if np.all(scores == -np.inf):
+                logging.warning(f'Could not find {target_count} diverse lineups. Stopping at {len(selected_lineups)}.')
+                break
+                
+            next_idx = scores.argmax()
+            selected_lineups.append(population[next_idx])
+            selected_indices.append(next_idx)
+        
+        # Calculate diversity metrics
+        selected_scores = [fitness[idx] for idx in selected_indices]
+        diversity_metrics = self._calculate_diversity_metrics(selected_lineups, diversity_method)
+        
+        return selected_lineups, selected_scores, diversity_metrics
+
+    def _calculate_selection_scores(self, population: np.ndarray, fitness: np.ndarray,
+                                   selected_lineups: List[np.ndarray], selected_indices: List[int],
+                                   diversity_weight: float, min_overlap_threshold: float, 
+                                   diversity_method: str) -> np.ndarray:
+        """
+        Calculate scores that balance fitness and diversity from already-selected lineups
+        """
+        available_mask = np.ones(len(population), dtype=bool)
+        available_mask[selected_indices] = False
+        
+        if not np.any(available_mask):
+            return np.full(len(population), -np.inf)
+        
+        # Calculate diversity penalties for available lineups
+        diversity_penalties = self._calculate_diversity_penalties(
+            population[available_mask], selected_lineups, min_overlap_threshold, diversity_method
+        )
+        
+        # Combine fitness and diversity: score = fitness - (diversity_weight * penalty)
+        scores = np.full(len(population), -np.inf)
+        scores[available_mask] = (
+            fitness[available_mask] - diversity_weight * diversity_penalties
+        )
+        
+        return scores
+
+    def _calculate_diversity_penalties(self, candidates: np.ndarray, selected_lineups: List[np.ndarray],
+                                     min_overlap_threshold: float, diversity_method: str) -> np.ndarray:
+        """
+        Calculate diversity penalties for candidate lineups against selected lineups
+        """
+        if len(selected_lineups) == 0:
+            return np.zeros(len(candidates))
+        
+        penalties = np.zeros(len(candidates))
+        
+        for i, candidate in enumerate(candidates):
+            max_overlap = 0.0
+            
+            for selected in selected_lineups:
+                if diversity_method == 'jaccard':
+                    overlap = self._jaccard_similarity(candidate, selected)
+                elif diversity_method == 'hamming':
+                    overlap = self._hamming_similarity(candidate, selected)
+                else:  # Default to jaccard
+                    overlap = self._jaccard_similarity(candidate, selected)
+                
+                max_overlap = max(max_overlap, overlap)
+            
+            # Penalty increases as overlap approaches 1.0
+            # If overlap exceeds threshold, apply heavy penalty
+            if max_overlap > (1.0 - min_overlap_threshold):
+                penalties[i] = 1000.0  # Heavy penalty for too similar lineups
+            else:
+                penalties[i] = max_overlap * 100.0  # Scaled penalty
+        
+        return penalties
+
+    @staticmethod
+    def _jaccard_similarity(lineup1: np.ndarray, lineup2: np.ndarray) -> float:
+        """Calculate Jaccard similarity between two lineups"""
+        set1 = set(lineup1)
+        set2 = set(lineup2)
+        intersection = len(set1.intersection(set2))
+        union = len(set1.union(set2))
+        return intersection / union if union > 0 else 0.0
+
+    @staticmethod
+    def _hamming_similarity(lineup1: np.ndarray, lineup2: np.ndarray) -> float:
+        """Calculate Hamming similarity between two lineups"""
+        return np.sum(lineup1 == lineup2) / len(lineup1)
+
+    def _calculate_diversity_metrics(self, lineups: List[np.ndarray], diversity_method: str) -> Dict[str, Any]:
+        """Calculate diversity metrics for the selected lineups"""
+        if len(lineups) <= 1:
+            return {'avg_overlap': 0.0, 'min_overlap': 0.0, 'diversity_matrix': np.array([[1.0]])}
+        
+        n_lineups = len(lineups)
+        diversity_matrix = np.zeros((n_lineups, n_lineups))
+        
+        overlaps = []
+        for i in range(n_lineups):
+            for j in range(i + 1, n_lineups):
+                if diversity_method == 'jaccard':
+                    overlap = self._jaccard_similarity(lineups[i], lineups[j])
+                elif diversity_method == 'hamming':
+                    overlap = self._hamming_similarity(lineups[i], lineups[j])
+                else:
+                    overlap = self._jaccard_similarity(lineups[i], lineups[j])
+                
+                diversity_matrix[i, j] = overlap
+                diversity_matrix[j, i] = overlap
+                overlaps.append(overlap)
+        
+        # Set diagonal to 1.0 (lineup compared to itself)
+        np.fill_diagonal(diversity_matrix, 1.0)
+        
+        return {
+            'avg_overlap': np.mean(overlaps) if overlaps else 0.0,
+            'min_overlap': np.min(overlaps) if overlaps else 0.0,
+            'diversity_matrix': diversity_matrix
+        }
