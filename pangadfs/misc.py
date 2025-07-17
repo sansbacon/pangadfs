@@ -94,7 +94,7 @@ def multidimensional_shifting(elements: Iterable,
     random_shifts /= random_shifts.sum(axis=1)[:, np.newaxis]
     shifted_probabilities = random_shifts - replicated_probabilities
     samples = np.argpartition(shifted_probabilities, sample_size, axis=1)[:, :sample_size]
-    return elements.to_numpy()[import numpy as import numpy as np
+    return elements.to_numpy()[samples]
 
 
 def multidimensional_shifting_fast(
@@ -184,63 +184,5 @@ def parents(population: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     fathers, mothers = np.array_split(population, 2)
     size = min(len(fathers), len(mothers))
-    return fathers[:size], mothers[:import numpy as np
-
-
-# --- Test ---
-def test_diversity_equivalence():
-    np.random.seed(42)
-    population = np.random.randint(0, 50, size=(100, 10))  # 100 samples, 10-player lineups
-
-    result_original = diversity_original(population)
-    result_optimized = diversity_optimized(population)
-
-    npt.assert_array_equal(result_original, result_optimized)
-    print("✅ Test passed: original and optimized versions produce the same result.")
-
-# Run test
-test_diversity_equivalence()
-
-
-def test_sampling_distribution():
-    np.random.seed(42)
-
-    # Setup
-    num_elements = 20
-    num_samples = 100_000
-    sample_size = 5
-
-    elements = np.arange(num_elements)
-    probs = np.random.dirichlet(np.ones(num_elements), size=1)[0].astype(np.float32)  # random valid probs
-
-    # Run sampling
-    samples = multidimensional_shifting_fast(
-        num_samples=num_samples,
-        sample_size=sample_size,
-        probs=probs,
-        elements=elements
-    )
-
-    # Count how often each element was selected
-    counts = np.bincount(samples.ravel(), minlength=num_elements)
-    empirical_probs = counts / (num_samples * sample_size)
-
-    # Chi-squared test
-    expected = probs * num_samples * sample_size
-    chi2, p_value = chisquare(counts, expected)
-
-    # Assert distribution is close (null hypothesis: observed == expected)
-    assert p_value > 0.01, f"Sampling distribution deviates significantly (p={p_value:.4f})"
-
-    print("✅ Sampling test passed. Empirical distribution is statistically consistent with target probabilities.")
-
-# Run test
-test_sampling_distribution()
-
-
-
-
-
-
-
+    return fathers[:size], mothers[:size]
 
