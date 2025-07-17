@@ -7,11 +7,9 @@ import logging
 from typing import Any, Dict, List
 
 import numpy as np
-import pandas as pd
 
 from pangadfs.base import OptimizeBase
 from pangadfs.ga import GeneticAlgorithm
-from pangadfs.misc import diversity_optimized
 
 
 class OptimizeDefault(OptimizeBase):
@@ -462,7 +460,8 @@ class OptimizeMultilineup(OptimizeBase):
         
         return penalties
 
-    def _jaccard_similarity(self, lineup1: np.ndarray, lineup2: np.ndarray) -> float:
+    @staticmethod
+    def _jaccard_similarity(lineup1: np.ndarray, lineup2: np.ndarray) -> float:
         """Calculate Jaccard similarity between two lineups"""
         set1 = set(lineup1)
         set2 = set(lineup2)
@@ -470,7 +469,8 @@ class OptimizeMultilineup(OptimizeBase):
         union = len(set1.union(set2))
         return intersection / union if union > 0 else 0.0
 
-    def _hamming_similarity(self, lineup1: np.ndarray, lineup2: np.ndarray) -> float:
+    @staticmethod
+    def _hamming_similarity(lineup1: np.ndarray, lineup2: np.ndarray) -> float:
         """Calculate Hamming similarity between two lineups"""
         return np.sum(lineup1 == lineup2) / len(lineup1)
 

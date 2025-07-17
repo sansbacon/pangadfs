@@ -5,8 +5,6 @@
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'pangadfs'))
-
-import logging
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -123,10 +121,10 @@ def test_multilineup_plugin():
         
         # Check that lineups are different
         lineup_sets = [set(lineup.index) for lineup in results['lineups']]
-        unique_lineups = len(set(frozenset(s) for s in lineup_sets))
+        unique_lineups = len({frozenset(s) for s in lineup_sets})
         print(f"✓ Generated {unique_lineups} unique lineups out of {len(results['lineups'])}")
         
-        print(f"\nTest Results Summary:")
+        print("\nTest Results Summary:")
         print(f"- Generated {len(results['lineups'])} lineups")
         print(f"- Best score: {results['best_score']:.2f}")
         print(f"- Average overlap: {results['diversity_metrics']['avg_overlap']:.3f}")

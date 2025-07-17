@@ -7,8 +7,6 @@ import logging
 
 from pangadfs.ga import GeneticAlgorithm
 from pathlib import Path
-
-import numpy as np
 from stevedore.driver import DriverManager
 from stevedore.named import NamedExtensionManager
 
@@ -80,14 +78,14 @@ def run_multilineup():
     results = ga.optimize()
 
     # Show results
-    print(f"\n=== MULTILINEUP OPTIMIZATION RESULTS ===")
+    print("\n=== MULTILINEUP OPTIMIZATION RESULTS ===")
     print(f"Generated {len(results['lineups'])} lineups")
     print(f"Best lineup score: {results['best_score']}")
     print(f"Average diversity overlap: {results['diversity_metrics']['avg_overlap']:.3f}")
     print(f"Minimum diversity overlap: {results['diversity_metrics']['min_overlap']:.3f}")
     
     # Show top 5 lineups
-    print(f"\n=== TOP 5 LINEUPS ===")
+    print("\n=== TOP 5 LINEUPS ===")
     for i, (lineup, score) in enumerate(zip(results['lineups'][:5], results['scores'][:5])):
         print(f"\nLineup {i+1} (Score: {score:.2f}):")
         print(lineup[['player', 'team', 'pos', 'salary', 'proj']].to_string(index=False))
@@ -160,16 +158,16 @@ def run_single_lineup():
     results = ga.optimize()
 
     # Show that it works exactly like the original optimizer
-    print(f"\n=== SINGLE LINEUP MODE (BACKWARD COMPATIBILITY) ===")
+    print("\n=== SINGLE LINEUP MODE (BACKWARD COMPATIBILITY) ===")
     print(f"Generated {len(results['lineups'])} lineup")
     print(f"Best lineup score: {results['best_score']}")
     
     # These should work exactly as before
-    print(f"\nBest lineup (backward compatibility):")
+    print("\nBest lineup (backward compatibility):")
     print(results['best_lineup'][['player', 'team', 'pos', 'salary', 'proj']].to_string(index=False))
     
     # New multilineup fields also available
-    print(f"\nFirst lineup from lineups array:")
+    print("\nFirst lineup from lineups array:")
     print(results['lineups'][0][['player', 'team', 'pos', 'salary', 'proj']].to_string(index=False))
 
 
