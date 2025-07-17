@@ -9,7 +9,7 @@ GUI Application entry point for pangadfs
 
 import sys
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
 import logging
 from pathlib import Path
 

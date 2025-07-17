@@ -4,7 +4,7 @@
 # Licensed under the MIT License
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog
 from pathlib import Path
 from typing import Dict, Any, Callable, Optional
 import pandas as pd

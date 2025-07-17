@@ -235,9 +235,12 @@ class ExportPanel:
     def _enable_widget_recursive(self, widget, target_text):
         """Recursively find and enable widget with target text"""
         try:
-            if hasattr(widget, 'cget') and 'text' in widget.keys():
-                if target_text.lower() in widget.cget('text').lower():
-                    widget.config(state="normal")
+            if (
+                hasattr(widget, 'cget')
+                and 'text' in widget.keys()
+                and target_text.lower() in widget.cget('text').lower()
+            ):
+                widget.config(state="normal")
         except:
             pass
         
@@ -247,9 +250,12 @@ class ExportPanel:
     def _disable_widget_recursive(self, widget, target_text):
         """Recursively find and disable widget with target text"""
         try:
-            if hasattr(widget, 'cget') and 'text' in widget.keys():
-                if target_text.lower() in widget.cget('text').lower():
-                    widget.config(state="disabled")
+            if (
+                hasattr(widget, 'cget')
+                and 'text' in widget.keys()
+                and target_text.lower() in widget.cget('text').lower()
+            ):
+                widget.config(state="disabled")
         except:
             pass
         

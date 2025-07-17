@@ -7,8 +7,6 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext
 from typing import Callable
 import logging
-import io
-import sys
 
 
 class ExecutionPanel:
@@ -142,7 +140,8 @@ class ExecutionPanel:
             if running is False:  # Explicitly stopped, not just initialized
                 self._log_message("Optimization stopped")
     
-    def _log_message(self, message: str, level: str = "INFO"):
+    @staticmethod
+    def _log_message(message: str, level: str = "INFO"):
         """Add a message to the log"""
         # Create a log record and let the handler format it
         logger = logging.getLogger(__name__)

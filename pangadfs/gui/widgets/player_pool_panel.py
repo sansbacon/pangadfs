@@ -7,7 +7,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from typing import Dict, Any, Optional, Set, Callable
 import pandas as pd
-import numpy as np
 from pathlib import Path
 
 
