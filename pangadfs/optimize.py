@@ -29,6 +29,8 @@ class OptimizeDefault(OptimizeBase):
             'best_score': float
 
         """
+        # Start profiling
+        ga.profiler.start_optimization()
         # create pool and pospool
         # pospool used to generate initial population
         # is a dict of position_name: DataFrame
@@ -76,11 +78,19 @@ class OptimizeDefault(OptimizeBase):
         best_fitness = population_fitness[omidx]
         best_lineup = initial_population[omidx]
 
+        # Mark setup phase complete
+        ga.profiler.mark_setup_complete()
+        
+        # Mark initial best solution (generation 0)
+        ga.profiler.mark_best_solution(0)
+
         # create new generations
         n_unimproved = 0
         population = initial_population.copy()
 
         for i in range(1, ga.ctx['ga_settings']['n_generations'] + 1):
+            # Start generation timing
+            ga.profiler.start_generation(i)
 
             # end program after n generations if not improving
             if n_unimproved == ga.ctx['ga_settings']['stop_criteria']:
@@ -139,15 +149,29 @@ class OptimizeDefault(OptimizeBase):
                 best_fitness = generation_max
                 best_lineup = population[omidx]
                 n_unimproved = 0
+                # Mark when best solution was found
+                ga.profiler.mark_best_solution(i)
             else:
                 n_unimproved += 1
                 logging.info(f'Lineup unimproved {n_unimproved} times')
+            
+            # End generation timing
+            ga.profiler.end_generation()
+
+        # End profiling
+        ga.profiler.end_optimization()
 
         # FINALIZE RESULTS
         # will break after n_generations or when stop_criteria reached
-        return {
+        results = {
             'population': population,
             'fitness': population_fitness,
             'best_lineup': pool.loc[best_lineup, :],
             'best_score': best_fitness
         }
+        
+        # Add profiling data to results
+        if ga.profiler.enabled:
+            results['profiling'] = ga.profiler.export_to_dict()
+        
+        return results
