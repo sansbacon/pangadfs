@@ -5,13 +5,14 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterable, Union
+from typing import Any, Dict, Iterable, Union, Optional
 
 import numpy as np
 import pandas as pd
 
 from stevedore.driver import DriverManager
 from stevedore.named import NamedExtensionManager
+from pangadfs.profiler import GAProfiler
 
 
 class GeneticAlgorithm:
@@ -50,6 +51,12 @@ class GeneticAlgorithm:
         self.driver_managers = driver_managers if driver_managers else {}
         self.extension_managers = extension_managers if extension_managers else {}
 
+        # Initialize profiler based on context settings
+        profiling_enabled = False
+        if ctx and isinstance(ctx, dict):
+            profiling_enabled = ctx.get('ga_settings', {}).get('enable_profiling', False)
+        self.profiler = GAProfiler(enabled=profiling_enabled)
+
         # if use_defaults, then load default plugin(s) for missing namespaces
         if use_defaults:
             self._load_plugins()
@@ -59,7 +66,7 @@ class GeneticAlgorithm:
         for ns in self.PLUGIN_NAMESPACES:
             if ns not in self.driver_managers and ns not in self.extension_managers:
                 if ns == 'validate':
-	                self.extension_managers[ns] = NamedExtensionManager(
+                    self.extension_managers[ns] = NamedExtensionManager(
                         namespace='pangadfs.validate', 
                         names=self.VALIDATE_PLUGINS, 
                         invoke_on_load=True, 
@@ -91,36 +98,36 @@ class GeneticAlgorithm:
         """
         logging.debug('{} {}'.format(population, agg))
 
-
         # combine keyword arguments with **kwargs
         params = locals().copy()
         params.pop('self', None)
         kwargs = params.pop('kwargs')
 
-        # if there is a driver, then use it and run once
-        if mgr := self.driver_managers.get('crossover'):
-            return mgr.driver.crossover(**params, **kwargs)
+        with self.profiler.time_operation('Crossover'):
+            # if there is a driver, then use it and run once
+            if mgr := self.driver_managers.get('crossover'):
+                return mgr.driver.crossover(**params, **kwargs)
 
-        # if agg=True, then aggregate crossed over populations
-        if kwargs.get('agg'):
-            pops = []
+            # if agg=True, then aggregate crossed over populations
+            if kwargs.get('agg'):
+                pops = []
+                for ext in self.extension_managers['crossover'].extensions:
+                    try:
+                        pops.append(ext.obj.mutate(**params, **kwargs))
+                    except:
+                        continue
+                return np.aggregate(pops)
+
+            # otherwise, run crossover for each plugin
+            # after first time, crosses over prior crossed-over population
+            population = params['population']
             for ext in self.extension_managers['crossover'].extensions:
                 try:
-                    pops.append(ext.obj.mutate(**params, **kwargs))
+                    params['population'] = population
+                    population = ext.obj.crossover(**kwargs)
                 except:
                     continue
-            return np.aggregate(pops)
-
-        # otherwise, run crossover for each plugin
-        # after first time, crosses over prior crossed-over population
-        population = params['population']
-        for ext in self.extension_managers['crossover'].extensions:
-            try:
-                params['population'] = population
-                population = ext.obj.crossover(**kwargs)
-            except:
-                continue
-        return population
+            return population
 
     def fitness(self, 
                 *,
@@ -145,16 +152,17 @@ class GeneticAlgorithm:
         params.pop('self', None)
         kwargs = params.pop('kwargs')
 
-        # if there is a driver, then use it and run once
-        if mgr := self.driver_managers.get('fitness'):
-            return mgr.driver.fitness(**params, **kwargs)
+        with self.profiler.time_operation('Fitness Evaluation'):
+            # if there is a driver, then use it and run once
+            if mgr := self.driver_managers.get('fitness'):
+                return mgr.driver.fitness(**params, **kwargs)
 
-        # otherwise, return fitness for first valid plugin
-        for ext in self.extension_managers['fitness'].extensions:
-            try:
-                return ext.obj.fitness(**params, **kwargs)
-            except:
-                continue
+            # otherwise, return fitness for first valid plugin
+            for ext in self.extension_managers['fitness'].extensions:
+                try:
+                    return ext.obj.fitness(**params, **kwargs)
+                except:
+                    continue
 
     def mutate(self, 
                *,
@@ -177,16 +185,17 @@ class GeneticAlgorithm:
         params.pop('self', None)
         kwargs = params.pop('kwargs')
 
-        # if there is a driver, then use it and run once
-        if mgr := self.driver_managers.get('mutate'):
-            return mgr.driver.mutate(**params, **kwargs)
+        with self.profiler.time_operation('Mutation'):
+            # if there is a driver, then use it and run once
+            if mgr := self.driver_managers.get('mutate'):
+                return mgr.driver.mutate(**params, **kwargs)
 
-        # otherwise, mutate with first valid plugin
-        for ext in self.extension_managers['mutate'].extensions:
-            try:
-                return ext.obj.mutate(**params, **kwargs)
-            except:
-                continue
+            # otherwise, mutate with first valid plugin
+            for ext in self.extension_managers['mutate'].extensions:
+                try:
+                    return ext.obj.mutate(**params, **kwargs)
+                except:
+                    continue
 
     def optimize(self, 
                  **kwargs) -> Dict[str, Any]:
@@ -232,13 +241,14 @@ class GeneticAlgorithm:
         params.pop('self', None)
         kwargs = params.pop('kwargs')
 
-        if mgr := self.driver_managers.get('pool'):
-            return mgr.driver.pool(**params, **kwargs)   
-        for ext in self.extension_managers['pool'].extensions:
-            try:
-                return ext.obj.pool(**params, **kwargs)  
-            except:
-                logging.error(f'Could not load {ext}')
+        with self.profiler.time_operation('Pool Creation'):
+            if mgr := self.driver_managers.get('pool'):
+                return mgr.driver.pool(**params, **kwargs)   
+            for ext in self.extension_managers['pool'].extensions:
+                try:
+                    return ext.obj.pool(**params, **kwargs)  
+                except:
+                    logging.error(f'Could not load {ext}')
 
     def populate(self,
                  *,
@@ -270,26 +280,27 @@ class GeneticAlgorithm:
         agg = params.pop('agg')
         kwargs = params.pop('kwargs')
 
-        # if there is a driver, then use it and run once
-        if mgr := self.driver_managers.get('populate'):
-            return mgr.driver.populate(**params, **kwargs)
+        with self.profiler.time_operation('Initial Population'):
+            # if there is a driver, then use it and run once
+            if mgr := self.driver_managers.get('populate'):
+                return mgr.driver.populate(**params, **kwargs)
 
-        # if agg=True, then aggregate populations
-        if agg:
-            pops = []
-            for ext in self.extension_managers['populate'].extensions:
+            # if agg=True, then aggregate populations
+            if agg:
+                pops = []
+                for ext in self.extension_managers['populate'].extensions:
+                    try:
+                        pops.append(ext.obj.populate(**params, **kwargs))  
+                    except:
+                        continue
+                return np.concatenate(pops)
+
+            # otherwise, run populate using first valid plugin
+            for ext in self.extension_managers['crossover'].extensions:
                 try:
-                    pops.append(ext.obj.populate(**params, **kwargs))  
+                    return ext.obj.populate(**kwargs)
                 except:
                     continue
-            return np.concatenate(pops)
-
-        # otherwise, run populate using first valid plugin
-        for ext in self.extension_managers['crossover'].extensions:
-            try:
-                return ext.obj.populate(**kwargs)
-            except:
-                continue
 
     def pospool(self, 
                 *,
@@ -318,15 +329,16 @@ class GeneticAlgorithm:
         params.pop('self', None)
         kwargs = params.pop('kwargs')
 
-        # if there is a driver, then use it and run once
-        # otherwise, run pospool using first valid plugin
-        if mgr := self.driver_managers.get('pospool'): 
-            return mgr.driver.pospool(**params, **kwargs)
-        for ext in self.extension_managers['pospool'].extensions:
-            try:
-                return ext.obj.pospool(**params, **kwargs)  
-            except:
-                continue
+        with self.profiler.time_operation('Pospool'):
+            # if there is a driver, then use it and run once
+            # otherwise, run pospool using first valid plugin
+            if mgr := self.driver_managers.get('pospool'): 
+                return mgr.driver.pospool(**params, **kwargs)
+            for ext in self.extension_managers['pospool'].extensions:
+                try:
+                    return ext.obj.pospool(**params, **kwargs)  
+                except:
+                    continue
         
     def select(self,
                *, 
@@ -356,16 +368,17 @@ class GeneticAlgorithm:
         params.pop('self', None)
         kwargs = params.pop('kwargs')
 
-        # if there is a driver, then use it and run once
-        if mgr := self.driver_managers.get('select'):
-            return mgr.driver.select(**params, **kwargs)
+        with self.profiler.time_operation('Selection'):
+            # if there is a driver, then use it and run once
+            if mgr := self.driver_managers.get('select'):
+                return mgr.driver.select(**params, **kwargs)
 
-        # otherwise, return select for first valid plugin
-        for ext in self.extension_managers['select'].extensions:
-            try:
-                return ext.obj.select(**params, **kwargs)
-            except:
-                continue
+            # otherwise, return select for first valid plugin
+            for ext in self.extension_managers['select'].extensions:
+                try:
+                    return ext.obj.select(**params, **kwargs)
+                except:
+                    continue
 
     def validate(self,
                  *,
@@ -390,11 +403,11 @@ class GeneticAlgorithm:
         params.pop('self', None)
         kwargs = params.pop('kwargs')
 
-        if mgr := self.driver_managers.get('validate'):
-            return mgr.driver.validate(**params, **kwargs)
-        population = params['population']
-        for ext in self.extension_managers['validate'].extensions:
-            params['population'] = population
-            population = ext.obj.validate(**params, **kwargs)
-        return population
-        
+        with self.profiler.time_operation('Validation'):
+            if mgr := self.driver_managers.get('validate'):
+                return mgr.driver.validate(**params, **kwargs)
+            population = params['population']
+            for ext in self.extension_managers['validate'].extensions:
+                params['population'] = population
+                population = ext.obj.validate(**params, **kwargs)
+            return population

@@ -29,9 +29,10 @@ def run():
 			'population_size': 30000,
 			'position_column': 'pos',
 			'salary_column': 'salary',
-			'select_method': 'roulette',
+			'select_method': 'tournament',
 			'stop_criteria': 10,
-			'verbose': True
+			'verbose': True,
+			'enable_profiling': True
 		},
 
 		'site_settings': {
@@ -71,6 +72,10 @@ def run():
 	# will break after n_generations or when stop_criteria reached
 	print(results['best_lineup'])
 	print(f'Lineup score: {results["best_score"]}')
+	
+	# Display profiling results if enabled
+	if ga.profiler.enabled:
+		ga.profiler.print_profiling_results()
 	
 
 if __name__ == '__main__':

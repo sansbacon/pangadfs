@@ -11,25 +11,23 @@ from pangadfs.base import ValidateBase
 
 class DuplicatesValidate(ValidateBase):
 
-    def validate(self,
-                 *, 
-                 population: np.ndarray, 
-                 **kwargs) -> np.ndarray:
-        """Removes duplicate individuals from population
+    def validate(self, *, population: np.ndarray, **kwargs) -> np.ndarray:
+        if len(population) <= 1:
+            return population
         
-            Args:
-                population (np.ndarray): the population to validate
-                **kwargs: keyword arguments for plugins
-
-            Returns:
-                np.ndarray: same width as population, likely has less rows
-
-        """
-        # the first part eliminates individuals with duplicate genes
-        # the second part eliminates duplicate individuals
-        population_sorted = np.sort(population, axis=-1)
-        population = population[(population_sorted[...,1:] != population_sorted[..., :-1]).all(-1)]
-        return unique(np.sort(population, axis=1))
+        # Sort once and reuse
+        population_sorted = np.sort(population, axis=1)
+        
+        # Check for internal duplicates using the already sorted array
+        has_internal_dups = (population_sorted[:, 1:] == population_sorted[:, :-1]).any(axis=1)
+        population_clean = population[~has_internal_dups]
+        
+        if len(population_clean) <= 1:
+            return population_clean
+        
+        # Use already sorted array for external duplicate removal
+        population_clean_sorted = population_sorted[~has_internal_dups]
+        return unique(population_clean_sorted)
 
 
 class SalaryValidate(ValidateBase):
@@ -52,5 +50,13 @@ class SalaryValidate(ValidateBase):
                 np.ndarray: same width as population, likely has less rows
 
         """
-        popsal = np.sum(salaries[population], axis=1)
-        return population[popsal <= salary_cap]
+        if len(population) == 0:
+            return population
+            
+        # Use take for potentially faster indexing
+        salary_matrix = np.take(salaries, population)
+        popsal = np.sum(salary_matrix, axis=1)
+        
+        # Use nonzero for potentially faster boolean indexing
+        valid_indices = np.nonzero(popsal <= salary_cap)[0]
+        return population[valid_indices]
