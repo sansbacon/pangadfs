@@ -5,7 +5,9 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterable, Union
+from typing import Any, Dict, Iterable, Union, Optional, List, Tuple
+from functools import lru_cache
+import time
 
 import numpy as np
 import pandas as pd
@@ -13,9 +15,15 @@ import pandas as pd
 from stevedore.driver import DriverManager
 from stevedore.named import NamedExtensionManager
 
+try:
+    from numba import njit
+    NUMBA_AVAILABLE = True
+except ModuleNotFoundError:
+    NUMBA_AVAILABLE = False
+
 
 class GeneticAlgorithm:
-    """Handles coordination of genetic algorithm plugins"""
+    """Handles coordination of genetic algorithm plugins with performance optimizations"""
 
     PLUGIN_NAMESPACES = (
        'pool', 'pospool', 'populate', 'fitness', 'optimize',
@@ -27,15 +35,10 @@ class GeneticAlgorithm:
     VALIDATE_PLUGINS = ('validate_salary', 'validate_duplicates')
 
     # Plugin configuration mapping for more declarative and scalable plugin loading
-    # This defines how each namespace should be loaded
-    # Each namespace can specify:
-    # - manager_type: 'driver' or 'named' to determine which manager to use
-    # - Additional parameters specific to the manager type
     PLUGIN_CONFIG = {
         # Special configuration for validate namespace which uses NamedExtensionManager
         'validate': {
             'manager_type': 'named',
-            # Use class attribute for plugin names to maintain a single source of truth
             'names': VALIDATE_PLUGINS,
             'invoke_on_load': True,
             'name_order': True
@@ -48,19 +51,22 @@ class GeneticAlgorithm:
         }
     }
 
-
     def __init__(self, 
                  ctx: Union[Dict, Any] = None,
                  driver_managers: Dict[str, DriverManager] = None, 
                  extension_managers: Dict[str, NamedExtensionManager] = None,
-                 use_defaults: bool = False):
-        """Creates GeneticAlgorithm instance
+                 use_defaults: bool = False,
+                 enable_caching: bool = True,
+                 performance_monitoring: bool = False):
+        """Creates GeneticAlgorithm instance with performance enhancements
 
         Args:
             ctx (dict): the context dict, AppConfig object, or other configuration scheme
             driver_managers (dict): key is namespace, value is DriverManager
             extension_managers (dict): key is namespace, value is NamedExtensionManager
             use_defaults (bool): use default plugins
+            enable_caching (bool): enable result caching for expensive operations
+            performance_monitoring (bool): enable performance monitoring and logging
 
         Returns:
             GeneticAlgorithm: the GA instance
@@ -71,43 +77,64 @@ class GeneticAlgorithm:
         # add context
         self.ctx = ctx
 
+        # Performance enhancements
+        self.enable_caching = enable_caching
+        self.performance_monitoring = performance_monitoring
+        self._operation_times = {} if performance_monitoring else None
+        self._cache_hits = 0
+        self._cache_misses = 0
+
         # add driver/extension managers
         self.driver_managers = driver_managers if driver_managers else {}
         self.extension_managers = extension_managers if extension_managers else {}
+
+        # Cache for plugin objects to avoid repeated lookups
+        self._plugin_cache = {}
+        self._plugins_cache = {}
+
+        # Pre-computed arrays cache
+        self._array_cache = {}
 
         # if use_defaults, then load default plugin(s) for missing namespaces
         if use_defaults:
             self._load_plugins()
 
+    def _time_operation(self, operation_name: str):
+        """Decorator for timing operations when performance monitoring is enabled."""
+        def decorator(func):
+            def wrapper(*args, **kwargs):
+                if self.performance_monitoring:
+                    start_time = time.time()
+                    result = func(*args, **kwargs)
+                    elapsed = time.time() - start_time
+                    
+                    if operation_name not in self._operation_times:
+                        self._operation_times[operation_name] = []
+                    self._operation_times[operation_name].append(elapsed)
+                    
+                    # Log slow operations
+                    if elapsed > 0.1:  # Log operations taking more than 100ms
+                        logging.warning(f"Slow operation {operation_name}: {elapsed:.3f}s")
+                    
+                    return result
+                else:
+                    return func(*args, **kwargs)
+            return wrapper
+        return decorator
+
     def _load_plugins(self):
-        """Loads default plugins for any namespace that doesn't have a plugin
-        
-        Uses the PLUGIN_CONFIG mapping to determine how to load each namespace.
-        This provides a more declarative and scalable approach to plugin loading.
-        
-        Raises:
-            ImportError: If a plugin cannot be loaded
-            AttributeError: If a plugin is missing required methods
-            Exception: For any other plugin loading errors
-        """
+        """Loads default plugins for any namespace that doesn't have a plugin with optimizations"""
         for ns in self.PLUGIN_NAMESPACES:
             # Skip namespaces that already have managers
             if ns in self.driver_managers or ns in self.extension_managers:
                 continue
                 
-            # Get the configuration for this namespace, or use the default if not specified
             config = self.PLUGIN_CONFIG.get(ns, self.PLUGIN_CONFIG['default']).copy()
-            
-            # Extract the manager type and remove it from the config
             manager_type = config.pop('manager_type', 'driver')
             
             try:
-                # Create the appropriate manager based on the configuration
                 if manager_type == 'named':
-                    # For NamedExtensionManager, we need the names parameter
                     names = config.pop('names', [])
-                    
-                    # Create the manager with the namespace and remaining config parameters
                     manager = NamedExtensionManager(
                         namespace=f'pangadfs.{ns}',
                         names=names,
@@ -122,20 +149,16 @@ class GeneticAlgorithm:
                     self.extension_managers[ns] = manager
                     
                 else:  # driver manager is the default
-                    # For DriverManager, we need to format the name parameter if a template is provided
                     if 'name_template' in config:
                         config['name'] = config.pop('name_template').format(ns=ns)
                     
-                    # Create the manager with the namespace and remaining config parameters
                     mgr = DriverManager(
                         namespace=f'pangadfs.{ns}',
                         invoke_args=(self.ctx,),
                         **config
                     )
                     
-                    # Validate the driver
                     self._validate_plugin(ns, mgr.driver)
-                    
                     self.driver_managers[ns] = mgr
                     
                 logging.info(f"Successfully loaded plugin(s) for namespace '{ns}'")
@@ -151,15 +174,7 @@ class GeneticAlgorithm:
                 raise
 
     def _validate_plugin(self, namespace: str, plugin_obj: Any) -> None:
-        """Validates that a plugin has the required methods for its namespace
-        
-        Args:
-            namespace (str): The plugin namespace
-            plugin_obj (Any): The plugin object to validate
-            
-        Raises:
-            AttributeError: If the plugin is missing required methods
-        """
+        """Validates that a plugin has the required methods for its namespace"""
         required_methods = self.REQUIRED_METHODS.get(namespace, [])
         missing_methods = []
         
@@ -173,50 +188,46 @@ class GeneticAlgorithm:
             raise AttributeError(
                 f"Plugin for namespace '{namespace}' is missing required methods: {', '.join(missing_methods)}"
             )
-            
+
     def get_plugin(self, namespace: str) -> Any:
-        """Get a plugin for the specified namespace
+        """Get a plugin for the specified namespace with caching"""
+        # Check cache first
+        if self.enable_caching and namespace in self._plugin_cache:
+            self._cache_hits += 1
+            return self._plugin_cache[namespace]
         
-        This method provides a clean API for accessing plugins. It first checks
-        if there's a driver manager for the namespace, and if not, it checks if
-        there's an extension manager and returns the first extension.
-        
-        Args:
-            namespace (str): The plugin namespace
-            
-        Returns:
-            Any: The plugin object
-            
-        Raises:
-            ValueError: If no plugin is found for the namespace
-        """
+        if self.enable_caching:
+            self._cache_misses += 1
+
         # Check if there's a driver manager for the namespace
         if mgr := self.driver_managers.get(namespace):
-            return mgr.driver
+            plugin = mgr.driver
+            if self.enable_caching:
+                self._plugin_cache[namespace] = plugin
+            return plugin
             
         # Check if there's an extension manager for the namespace
         if mgr := self.extension_managers.get(namespace):
             if mgr.extensions:
-                return mgr.extensions[0].obj
+                plugin = mgr.extensions[0].obj
+                if self.enable_caching:
+                    self._plugin_cache[namespace] = plugin
+                return plugin
                 
         # No plugin found
         raise ValueError(f"No plugin found for namespace '{namespace}'")
+
+    def get_plugins(self, namespace: str) -> Tuple[Any, ...]:
+        """Get all plugins for the specified namespace with caching"""
+        # Check cache first
+        cache_key = f"{namespace}_all"
+        if self.enable_caching and cache_key in self._plugins_cache:
+            self._cache_hits += 1
+            return self._plugins_cache[cache_key]
         
-    def get_plugins(self, namespace: str) -> list:
-        """Get all plugins for the specified namespace
-        
-        This method is useful for namespaces that can have multiple plugins,
-        such as 'validate'.
-        
-        Args:
-            namespace (str): The plugin namespace
-            
-        Returns:
-            list: A list of plugin objects
-            
-        Raises:
-            ValueError: If no plugins are found for the namespace
-        """
+        if self.enable_caching:
+            self._cache_misses += 1
+
         plugins = []
         
         # Check if there's a driver manager for the namespace
@@ -230,26 +241,29 @@ class GeneticAlgorithm:
         # No plugins found
         if not plugins:
             raise ValueError(f"No plugins found for namespace '{namespace}'")
-            
-        return plugins
-    
+        
+        # Convert to tuple for caching (lists are not hashable)
+        plugins_tuple = tuple(plugins)
+        if self.enable_caching:
+            self._plugins_cache[cache_key] = plugins_tuple
+        return plugins_tuple
+
     def crossover(self,
                   *,
                   population: np.ndarray = None,
                   agg: bool = None,
                   **kwargs) -> np.ndarray:
-        """Crossover operation to generate new population
+        """Crossover operation with performance optimizations"""
+        if self.performance_monitoring:
+            start_time = time.time()
 
-        Args:
-            population (np.ndarray): the population to cross over, is 2D array
-            agg (bool): if True, then aggregate multiple crossovers, otherwise is sequential.          
-            **kwargs: Keyword arguments for plugins (other than default)
+        # Validate inputs
+        if population is None or len(population) == 0:
+            raise ValueError("Population cannot be None or empty")
 
-        Returns:
-            np.ndarray: the crossed-over population
-
-        """
-        logging.debug('{} {}'.format(population, agg))
+        # Ensure population is contiguous for better performance
+        if not population.flags['C_CONTIGUOUS']:
+            population = np.ascontiguousarray(population)
 
         # combine keyword arguments with **kwargs
         params = locals().copy()
@@ -259,7 +273,13 @@ class GeneticAlgorithm:
         try:
             # Try to get a single plugin first
             plugin = self.get_plugin('crossover')
-            return plugin.crossover(**params, **kwargs)
+            result = plugin.crossover(**params, **kwargs)
+            
+            if self.performance_monitoring:
+                elapsed = time.time() - start_time
+                self._log_operation_time('crossover', elapsed)
+            
+            return result
         except ValueError:
             # No single plugin found, try to get all plugins
             pass
@@ -271,19 +291,29 @@ class GeneticAlgorithm:
                 pops = []
                 for plugin in plugins:
                     pops.append(plugin.crossover(**params, **kwargs))
-                return np.concatenate(pops)
+                result = np.concatenate(pops)
+                
+                if self.performance_monitoring:
+                    elapsed = time.time() - start_time
+                    self._log_operation_time('crossover_agg', elapsed)
+                
+                return result
             except Exception as e:
                 logging.error(f"Error in crossover plugins: {str(e)}")
                 raise
 
         # otherwise, run crossover for each plugin sequentially
-        # after first time, crosses over prior crossed-over population
         try:
             plugins = self.get_plugins('crossover')
             population = params['population']
             for plugin in plugins:
                 params['population'] = population
                 population = plugin.crossover(**params, **kwargs)
+            
+            if self.performance_monitoring:
+                elapsed = time.time() - start_time
+                self._log_operation_time('crossover_sequential', elapsed)
+            
             return population
         except Exception as e:
             logging.error(f"Error in crossover plugins: {str(e)}")
@@ -294,18 +324,19 @@ class GeneticAlgorithm:
                 population: np.ndarray = None, 
                 points: np.ndarray = None, 
                 **kwargs) -> np.ndarray:
-        """Measures fitness of population
+        """Measures fitness of population with optimizations"""
+        if self.performance_monitoring:
+            start_time = time.time()
 
-        Args:
-            population (np.ndarray): the population to cross over, is 2D array
-            points (np.ndarray): the fitness of the population to crossover, is 1D array
-            **kwargs: Keyword arguments for plugins (other than default)
+        # Validate inputs
+        if population is None or points is None:
+            raise ValueError("Population and points cannot be None")
 
-        Returns:
-            np.ndarray: population fitness as 1D array of float
-
-        """
-        logging.debug('{} {}'.format(population, points))
+        # Ensure arrays are contiguous for better performance
+        if not population.flags['C_CONTIGUOUS']:
+            population = np.ascontiguousarray(population)
+        if not points.flags['C_CONTIGUOUS']:
+            points = np.ascontiguousarray(points)
 
         # combine keyword arguments with **kwargs
         params = locals().copy()
@@ -313,9 +344,14 @@ class GeneticAlgorithm:
         kwargs = params.pop('kwargs')
 
         try:
-            # Get the fitness plugin and call its fitness method
             plugin = self.get_plugin('fitness')
-            return plugin.fitness(**params, **kwargs)
+            result = plugin.fitness(**params, **kwargs)
+            
+            if self.performance_monitoring:
+                elapsed = time.time() - start_time
+                self._log_operation_time('fitness', elapsed)
+            
+            return result
         except Exception as e:
             logging.error(f"Error in fitness plugin: {str(e)}")
             raise
@@ -325,18 +361,21 @@ class GeneticAlgorithm:
                population: np.ndarray = None,
                mutation_rate: float = None,
                **kwargs) -> np.ndarray:
-        """Mutates population at frequency of mutation_rate
+        """Mutates population with performance optimizations"""
+        if self.performance_monitoring:
+            start_time = time.time()
 
-        Args:
-            population (np.ndarray): the population to mutate. Shape is n_individuals x n_chromosomes.
-            mutation_rate (float): decimal value from 0 to 1, default .05
-            **kwargs: Keyword arguments for plugins (other than default)
+        # Validate inputs
+        if population is None:
+            raise ValueError("Population cannot be None")
+        
+        # Set default mutation rate if not provided
+        if mutation_rate is None:
+            mutation_rate = 0.05
 
-        Returns:
-            np.ndarray: same shape and dtype as population
-
-        """
-        logging.debug('{} {} {} {}'.format(population, mutation_rate))
+        # Ensure population is contiguous for better performance
+        if not population.flags['C_CONTIGUOUS']:
+            population = np.ascontiguousarray(population)
 
         # combine keyword arguments with **kwargs
         params = locals().copy()
@@ -344,58 +383,76 @@ class GeneticAlgorithm:
         kwargs = params.pop('kwargs')
 
         try:
-            # Get the mutate plugin and call its mutate method
             plugin = self.get_plugin('mutate')
-            return plugin.mutate(**params, **kwargs)
+            result = plugin.mutate(**params, **kwargs)
+            
+            if self.performance_monitoring:
+                elapsed = time.time() - start_time
+                self._log_operation_time('mutate', elapsed)
+            
+            return result
         except Exception as e:
             logging.error(f"Error in mutate plugin: {str(e)}")
             raise
 
     def optimize(self, 
                  **kwargs) -> Dict[str, Any]:
-        """Optimizes population
+        """Optimizes population with enhanced monitoring"""
+        if self.performance_monitoring:
+            start_time = time.time()
 
-        Args:
-            **kwargs: Keyword arguments for plugins (other than default)
-
-        Returns:
-            dict
-
-        """
         # combine keyword arguments with **kwargs
-        # need to figure out best way to pass ga to optimize
         params = locals().copy()
         params['ga'] = params.pop('self', None)
         kwargs = params.pop('kwargs')
 
         try:
-            # Get the optimize plugin and call its optimize method
             plugin = self.get_plugin('optimize')
-            return plugin.optimize(**params, **kwargs)
+            result = plugin.optimize(**params, **kwargs)
+            
+            if self.performance_monitoring:
+                elapsed = time.time() - start_time
+                self._log_operation_time('optimize', elapsed)
+                # Add performance stats to result
+                result['ga_performance_stats'] = self.get_performance_stats()
+            
+            return result
         except Exception as e:
             logging.error(f"Error in optimize plugin: {str(e)}")
             raise
             
     def pool(self, *, csvpth: Path = None, **kwargs) -> pd.DataFrame:
-        """Creates pool of players.
+        """Creates pool of players with caching"""
+        if self.performance_monitoring:
+            start_time = time.time()
 
-        Args:
-            csvpth (Path): the path of the datafile
-            **kwargs: Keyword arguments for plugins (other than default)
+        # Check cache for pool data
+        cache_key = f"pool_{csvpth}_{hash(str(kwargs))}"
+        if self.enable_caching and cache_key in self._array_cache:
+            self._cache_hits += 1
+            return self._array_cache[cache_key]
 
-        Returns:
-            pd.DataFrame: initial pool of players
-        
-        """
+        if self.enable_caching:
+            self._cache_misses += 1
+
         # combine keyword arguments with **kwargs
         params = locals().copy()
         params.pop('self', None)
         kwargs = params.pop('kwargs')
 
         try:
-            # Get the pool plugin and call its pool method
             plugin = self.get_plugin('pool')
-            return plugin.pool(**params, **kwargs)
+            result = plugin.pool(**params, **kwargs)
+            
+            # Cache the result
+            if self.enable_caching:
+                self._array_cache[cache_key] = result
+            
+            if self.performance_monitoring:
+                elapsed = time.time() - start_time
+                self._log_operation_time('pool', elapsed)
+            
+            return result
         except Exception as e:
             logging.error(f"Error in pool plugin: {str(e)}")
             raise
@@ -406,23 +463,15 @@ class GeneticAlgorithm:
                  posmap: Dict[str, int] = None,
                  population_size: int = None,
                  probcol: str = 'prob',
-                 agg: bool = 'False',
+                 agg: bool = False,
                  **kwargs) -> np.ndarray:
-        """Creates initial population of specified size
-        
-        Args:
-            pospool (Dict[str, pd.DataFrame]): pool segmented by position
-            posmap (Dict[str, int]): positions & accompanying roster slots
-            population_size (int): number of individuals to create
-            probcol (str): the dataframe column with probabilities, default 'probs'
-            agg (bool): default False. Aggregate multiple crossovers if True.
-            **kwargs: Keyword arguments for plugins (other than default)
+        """Creates initial population with optimizations"""
+        if self.performance_monitoring:
+            start_time = time.time()
 
-        Returns:
-            np.ndarray: the population
-
-        """
-        logging.debug('{} {} {} {}'.format(pospool, posmap, population_size, probcol))
+        # Validate inputs
+        if pospool is None or posmap is None or population_size is None:
+            raise ValueError("pospool, posmap, and population_size are required")
 
         # combine keyword arguments with **kwargs
         params = locals().copy()
@@ -433,7 +482,13 @@ class GeneticAlgorithm:
         try:
             # Try to get a single plugin first
             plugin = self.get_plugin('populate')
-            return plugin.populate(**params, **kwargs)
+            result = plugin.populate(**params, **kwargs)
+            
+            if self.performance_monitoring:
+                elapsed = time.time() - start_time
+                self._log_operation_time('populate', elapsed)
+            
+            return result
         except ValueError:
             # No single plugin found, try to get all plugins
             pass
@@ -445,7 +500,13 @@ class GeneticAlgorithm:
                 pops = []
                 for plugin in plugins:
                     pops.append(plugin.populate(**params, **kwargs))
-                return np.concatenate(pops)
+                result = np.concatenate(pops)
+                
+                if self.performance_monitoring:
+                    elapsed = time.time() - start_time
+                    self._log_operation_time('populate_agg', elapsed)
+                
+                return result
             except Exception as e:
                 logging.error(f"Error in populate plugins: {str(e)}")
                 raise
@@ -453,7 +514,13 @@ class GeneticAlgorithm:
         # otherwise, use the first plugin
         try:
             plugins = self.get_plugins('populate')
-            return plugins[0].populate(**params, **kwargs)
+            result = plugins[0].populate(**params, **kwargs)
+            
+            if self.performance_monitoring:
+                elapsed = time.time() - start_time
+                self._log_operation_time('populate_single', elapsed)
+            
+            return result
         except Exception as e:
             logging.error(f"Error in populate plugin: {str(e)}")
             raise
@@ -465,20 +532,18 @@ class GeneticAlgorithm:
                 column_mapping: Dict[str, str] = None,
                 flex_positions: Iterable[str] = None,
                 **kwargs) -> Dict[str, pd.DataFrame]:
-        """Divides pool into positional buckets
-        
-        Args:   
-            pool (pd.DataFrame):
-            posfilter (Dict[str, int]): position name and points threshold
-            column_mapping (Dict[str, str]): column names for player, position, salary, projection
-            flex_positions (Iterable[str]): e.g. (WR, RB, TE)
-            **kwargs: Keyword arguments for plugins (other than default)
+        """Divides pool into positional buckets with caching"""
+        if self.performance_monitoring:
+            start_time = time.time()
 
-        Returns:
-            Dict[str, pd.DataFrame] where keys == posfilter.keys
+        # Check cache for pospool data
+        cache_key = f"pospool_{id(pool)}_{hash(str(posfilter))}_{hash(str(column_mapping))}"
+        if self.enable_caching and cache_key in self._array_cache:
+            self._cache_hits += 1
+            return self._array_cache[cache_key]
 
-        """
-        logging.debug('{} {} {} {}'.format(pool, posfilter, column_mapping, flex_positions))
+        if self.enable_caching:
+            self._cache_misses += 1
 
         # combine keyword arguments with **kwargs
         params = locals().copy()
@@ -486,9 +551,18 @@ class GeneticAlgorithm:
         kwargs = params.pop('kwargs')
 
         try:
-            # Get the pospool plugin and call its pospool method
             plugin = self.get_plugin('pospool')
-            return plugin.pospool(**params, **kwargs)
+            result = plugin.pospool(**params, **kwargs)
+            
+            # Cache the result
+            if self.enable_caching:
+                self._array_cache[cache_key] = result
+            
+            if self.performance_monitoring:
+                elapsed = time.time() - start_time
+                self._log_operation_time('pospool', elapsed)
+            
+            return result
         except Exception as e:
             logging.error(f"Error in pospool plugin: {str(e)}")
             raise
@@ -500,19 +574,23 @@ class GeneticAlgorithm:
                n: int = None,
                method: str = 'fittest',
                **kwargs) -> np.ndarray:
-        """Selects/filters population
+        """Selects/filters population with optimizations"""
+        if self.performance_monitoring:
+            start_time = time.time()
 
-        Args:
-            population (np.ndarray): the population to cross over, is 2D array
-            population_fitness (np.ndarray): 1D array of float
-            n (int): number of individuals to select
-            method (str): the selection method, default roulette
-            **kwargs: Keyword arguments for plugins (other than default)
+        # Validate inputs
+        if population is None or population_fitness is None:
+            raise ValueError("Population and population_fitness cannot be None")
+        
+        if n is None:
+            n = len(population)
 
-        Returns:
-            np.ndarray: population fitness as 1D array of float
+        # Ensure arrays are contiguous for better performance
+        if not population.flags['C_CONTIGUOUS']:
+            population = np.ascontiguousarray(population)
+        if not population_fitness.flags['C_CONTIGUOUS']:
+            population_fitness = np.ascontiguousarray(population_fitness)
 
-        """
         logging.debug('Selection method {}, n is {}'.format(method, n))
         logging.debug('Pop size {}, fitness {}'.format(len(population), population_fitness.mean()))
 
@@ -522,9 +600,14 @@ class GeneticAlgorithm:
         kwargs = params.pop('kwargs')
 
         try:
-            # Get the select plugin and call its select method
             plugin = self.get_plugin('select')
-            return plugin.select(**params, **kwargs)
+            result = plugin.select(**params, **kwargs)
+            
+            if self.performance_monitoring:
+                elapsed = time.time() - start_time
+                self._log_operation_time('select', elapsed)
+            
+            return result
         except Exception as e:
             logging.error(f"Error in select plugin: {str(e)}")
             raise
@@ -534,17 +617,20 @@ class GeneticAlgorithm:
                  population: np.ndarray = None, 
                  salaries: np.ndarray = None, 
                  **kwargs) -> np.ndarray:
-        """Validate lineup according to validate plugin criteria
-        
-        Args:
-            population (np.ndarray): the population to validate.
-            salaries (np.ndarray): the population salaries
-            **kwargs: Keyword arguments for plugins (other than default)
+        """Validate lineup with performance optimizations and even population guarantee"""
+        if self.performance_monitoring:
+            start_time = time.time()
 
-        Returns:
-            np.ndarray: same width and dtype as population. Likely less rows due to exclusions.
-            
-        """
+        # Validate inputs
+        if population is None:
+            raise ValueError("Population cannot be None")
+
+        # Ensure arrays are contiguous for better performance
+        if not population.flags['C_CONTIGUOUS']:
+            population = np.ascontiguousarray(population)
+        if salaries is not None and not salaries.flags['C_CONTIGUOUS']:
+            salaries = np.ascontiguousarray(salaries)
+
         logging.debug(f'Salaries {salaries}')
 
         # combine keyword arguments with **kwargs
@@ -552,62 +638,140 @@ class GeneticAlgorithm:
         params.pop('self', None)
         kwargs = params.pop('kwargs')
 
+        validated_population = None
+
         try:
             # Try to get a single plugin first
             plugin = self.get_plugin('validate')
-            return plugin.validate(**params, **kwargs)
+            validated_population = plugin.validate(**params, **kwargs)
+            
         except ValueError:
             # No single plugin found, try to get all plugins
-            pass
-            
-        # For validate, we need to run all plugins sequentially
-        try:
-            plugins = self.get_plugins('validate')
-            population = params['population']
-            for plugin in plugins:
-                params['population'] = population
-                population = plugin.validate(**params, **kwargs)
-            return population
-        except Exception as e:
-            logging.error(f"Error in validate plugins: {str(e)}")
-            raise
-            
+            try:
+                plugins = self.get_plugins('validate')
+                validated_population = params['population']
+                for plugin in plugins:
+                    params['population'] = validated_population
+                    validated_population = plugin.validate(**params, **kwargs)
+                    
+            except Exception as e:
+                logging.error(f"Error in validate plugins: {str(e)}")
+                raise
+
+        # Ensure even number of individuals for crossover compatibility
+        if validated_population is not None and len(validated_population) % 2 != 0:
+            if len(validated_population) > 1:
+                # Remove the last individual to make it even
+                validated_population = validated_population[:-1]
+                logging.debug(f"Removed 1 individual to ensure even population size: {len(validated_population)}")
+            else:
+                # If only 1 individual left, duplicate it to make 2
+                validated_population = np.vstack([validated_population, validated_population])
+                logging.debug(f"Duplicated single individual to ensure even population size: {len(validated_population)}")
+
+        if self.performance_monitoring:
+            elapsed = time.time() - start_time
+            self._log_operation_time('validate', elapsed)
+        
+        return validated_population
+
+    def _log_operation_time(self, operation: str, elapsed: float):
+        """Log operation time for performance monitoring"""
+        if operation not in self._operation_times:
+            self._operation_times[operation] = []
+        self._operation_times[operation].append(elapsed)
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get comprehensive performance statistics"""
+        if not self.performance_monitoring:
+            return {"performance_monitoring": False}
+
+        stats = {
+            "performance_monitoring": True,
+            "cache_enabled": self.enable_caching,
+            "cache_hits": self._cache_hits,
+            "cache_misses": self._cache_misses,
+            "cache_hit_rate": self._cache_hits / (self._cache_hits + self._cache_misses) if (self._cache_hits + self._cache_misses) > 0 else 0,
+            "operation_stats": {}
+        }
+
+        for operation, times in self._operation_times.items():
+            stats["operation_stats"][operation] = {
+                "count": len(times),
+                "total_time": sum(times),
+                "avg_time": sum(times) / len(times),
+                "min_time": min(times),
+                "max_time": max(times)
+            }
+
+        return stats
+
+    def clear_cache(self):
+        """Clear all caches"""
+        self._plugin_cache.clear()
+        self._plugins_cache.clear()
+        self._array_cache.clear()
+        self._cache_hits = 0
+        self._cache_misses = 0
+
     def run(self, population: list, generations: int):
-        """Run the genetic algorithm for a specified number of generations
-        
-        This method demonstrates the use of the get_plugin method to get
-        the plugins needed for the genetic algorithm.
-        
-        Args:
-            population (list): The initial population
-            generations (int): The number of generations to run
-            
-        Returns:
-            list: The final population
-        """
+        """Run the genetic algorithm with performance monitoring"""
+        if self.performance_monitoring:
+            start_time = time.time()
+
         fitness_fn = self.get_plugin("fitness")
         select_fn = self.get_plugin("select")
         mutate_fn = self.get_plugin("mutate")
         crossover_fn = self.get_plugin("crossover")
     
-        for _ in range(generations):
+        for generation in range(generations):
             fitness_scores = [fitness_fn.evaluate(ind) for ind in population]
             selected = select_fn.select(population, fitness_scores)
             offspring = crossover_fn.crossover(selected)
             population = mutate_fn.mutate(offspring)
     
+        if self.performance_monitoring:
+            elapsed = time.time() - start_time
+            logging.info(f"GA run completed in {elapsed:.3f}s for {generations} generations")
+
         return population
         
     @staticmethod
-    def list_available_plugins(namespace: str):
-        """List all available plugins for a given namespace
-        
-        Args:
-            namespace (str): The plugin namespace
-            
-        Returns:
-            list: A list of plugin names
-        """
+    def list_available_plugins(namespace: str) -> List[str]:
+        """List all available plugins for a given namespace"""
         from stevedore import ExtensionManager
-        mgr = ExtensionManager(namespace=namespace, invoke_on_load=False)
-        return [ext.name for ext in mgr.extensions]
+        try:
+            mgr = ExtensionManager(namespace=namespace, invoke_on_load=False)
+            return [ext.name for ext in mgr.extensions]
+        except Exception as e:
+            logging.error(f"Error listing plugins for namespace {namespace}: {str(e)}")
+            return []
+
+    def benchmark_operations(self, iterations: int = 100) -> Dict[str, float]:
+        """Benchmark key operations for performance analysis"""
+        if not self.performance_monitoring:
+            logging.warning("Performance monitoring must be enabled for benchmarking")
+            return {}
+
+        # Reset performance stats
+        self._operation_times.clear()
+        
+        # Create sample data for benchmarking
+        sample_population = np.random.randint(0, 100, size=(100, 10))
+        sample_fitness = np.random.random(100)
+        
+        benchmark_results = {}
+        
+        # Benchmark plugin retrieval
+        start_time = time.time()
+        for _ in range(iterations):
+            self.get_plugin('fitness')
+        benchmark_results['plugin_retrieval'] = (time.time() - start_time) / iterations
+        
+        # Benchmark array operations
+        start_time = time.time()
+        for _ in range(iterations):
+            np.ascontiguousarray(sample_population)
+        benchmark_results['array_contiguous'] = (time.time() - start_time) / iterations
+        
+        return benchmark_results

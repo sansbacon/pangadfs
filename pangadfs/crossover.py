@@ -8,7 +8,7 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 
 from pangadfs.base import CrossoverBase
-from pangadfs.misc import diversity_optimized as diversity, parents
+from pangadfs.misc import diversity, parents
 
 # Set up logging
 logger = logging.getLogger(__name__)

@@ -26,7 +26,7 @@ def run():
 			'mutation_rate': .05,
 			'n_generations': 20,
 			'points_column': 'proj',
-			'population_size': 30000,
+			'population_size': 10000,
 			'position_column': 'pos',
 			'salary_column': 'salary',
 			'select_method': 'roulette',

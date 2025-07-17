@@ -5,17 +5,16 @@
 
 from typing import Dict, Iterable, Tuple
 import numpy as np
-import numpy.testing as npt
-from scipy.stats import chisquare
 
 try:
-   from numba import njit, prange
+    from numba import njit, prange
+    NUMBA_AVAILABLE = True
 except ModuleNotFoundError:
-    pass
+    NUMBA_AVAILABLE = False
 
 
 def diversity(population: np.ndarray) -> np.ndarray:
-    """Calculates diversity of lineups
+    """Calculates diversity of lineups using the best available implementation.
     
     Args:
         population (np.ndarray): the population
@@ -24,14 +23,15 @@ def diversity(population: np.ndarray) -> np.ndarray:
         np.ndarray: is square, shape len(population) x len(population)
 
     """
-    uniques = np.unique(population)
-    a = (population[..., None] == uniques).sum(1)
-    return np.einsum('ij,kj->ik', a, a)
+    if NUMBA_AVAILABLE:
+        return _diversity_numba(population)
+    else:
+        return _diversity_fast(population)
 
 
-
-def diversity_optimized(population: np.ndarray) -> np.ndarray:
+def _diversity_fast(population: np.ndarray) -> np.ndarray:
     """
+    Fast implementation of diversity calculation using optimized numpy operations.
     Calculates pairwise diversity between samples (overlap of player IDs).
 
     Args:
@@ -53,6 +53,41 @@ def diversity_optimized(population: np.ndarray) -> np.ndarray:
     return a @ a.T
 
 
+if NUMBA_AVAILABLE:
+    @njit(parallel=True, fastmath=True)
+    def _diversity_numba(population: np.ndarray) -> np.ndarray:
+        """
+        Numba-accelerated diversity calculation.
+        """
+        uniques = np.unique(population)
+        N, K = population.shape
+        U = len(uniques)
+        
+        # Create count matrix
+        a = np.zeros((N, U), dtype=np.uint8)
+        for i in range(N):
+            for j in range(K):
+                val = population[i, j]
+                # Find index of val in uniques
+                for k in range(U):
+                    if uniques[k] == val:
+                        a[i, k] += 1
+                        break
+        
+        # Compute pairwise dot product
+        result = np.zeros((N, N), dtype=np.int32)
+        for i in range(N):
+            for j in range(N):
+                for k in range(U):
+                    result[i, j] += a[i, k] * a[j, k]
+        
+        return result
+else:
+    def _diversity_numba(population: np.ndarray) -> np.ndarray:
+        """Fallback when numba is not available."""
+        return _diversity_fast(population)
+
+
 def exposure(population: np.ndarray = None) -> Dict[int, int]:
     """Returns dict of index: count of individuals
 
@@ -69,7 +104,7 @@ def exposure(population: np.ndarray = None) -> Dict[int, int]:
         >>> print([round(i, 3) for i in sorted(top_exposure / len(fittest_population), reverse=True)])            
 
     """
-    flat = population.flatten
+    flat = population.flatten()
     return dict(zip(flat, np.bincount(flat)[flat]))
 
 
@@ -78,6 +113,7 @@ def multidimensional_shifting(elements: Iterable,
                               sample_size: int, 
                               probs: Iterable) -> np.ndarray:
     """Based on https://medium.com/ibm-watson/incredibly-fast-random-sampling-in-python-baf154bd836a
+    Uses the best available implementation (numba if available, otherwise fast numpy).
     
     Args:
         elements (iterable): iterable to sample from, typically a dataframe index
@@ -89,15 +125,21 @@ def multidimensional_shifting(elements: Iterable,
         ndarray: of shape (num_samples, sample_size)
         
     """
-    replicated_probabilities = np.tile(probs, (num_samples, 1))
-    random_shifts = np.random.random(replicated_probabilities.shape)
-    random_shifts /= random_shifts.sum(axis=1)[:, np.newaxis]
-    shifted_probabilities = random_shifts - replicated_probabilities
-    samples = np.argpartition(shifted_probabilities, sample_size, axis=1)[:, :sample_size]
-    return elements.to_numpy()
-        
+    # Convert inputs to numpy arrays
+    if hasattr(elements, 'to_numpy'):
+        elements_array = elements.to_numpy()
+    else:
+        elements_array = np.asarray(elements)
+    
+    probs_array = np.asarray(probs, dtype=np.float32)
+    
+    if NUMBA_AVAILABLE:
+        return _multidimensional_shifting_numba(num_samples, sample_size, probs_array, elements_array)
+    else:
+        return _multidimensional_shifting_fast(num_samples, sample_size, probs_array, elements_array)
 
-def multidimensional_shifting_fast(
+
+def _multidimensional_shifting_fast(
     num_samples: int,
     sample_size: int,
     probs: np.ndarray,
@@ -130,46 +172,56 @@ def multidimensional_shifting_fast(
     return elements[idx]
 
 
-@njit(parallel=True, fastmath=True)
-def _generate_shifted_indices(probs: np.ndarray, num_samples: int, sample_size: int) -> np.ndarray:
-    n_elements = probs.size
-    out = np.empty((num_samples, sample_size), dtype=np.int32)
+if NUMBA_AVAILABLE:
+    @njit(parallel=True, fastmath=True)
+    def _generate_shifted_indices(probs: np.ndarray, num_samples: int, sample_size: int) -> np.ndarray:
+        n_elements = probs.size
+        out = np.empty((num_samples, sample_size), dtype=np.int32)
 
-    for i in prange(num_samples):
-        rand = np.random.random(n_elements).astype(np.float32)
-        rand /= rand.sum()
-        shifted = rand - probs
-        out[i] = np.argpartition(shifted, sample_size - 1)[:sample_size]
+        for i in prange(num_samples):
+            rand = np.random.random(n_elements).astype(np.float32)
+            rand /= rand.sum()
+            shifted = rand - probs
+            out[i] = np.argpartition(shifted, sample_size - 1)[:sample_size]
 
-    return out
+        return out
 
-def multidimensional_shifting_numba(
-    num_samples: int,
-    sample_size: int,
-    probs: np.ndarray,
-    elements: np.ndarray = None
-) -> np.ndarray:
-    """
-    Numba-accelerated version of multidimensional shifting.
-    Fast for large numbers of samples and small element sets.
+    def _multidimensional_shifting_numba(
+        num_samples: int,
+        sample_size: int,
+        probs: np.ndarray,
+        elements: np.ndarray = None
+    ) -> np.ndarray:
+        """
+        Numba-accelerated version of multidimensional shifting.
+        Fast for large numbers of samples and small element sets.
 
-    Args:
-        num_samples (int): Number of rows to sample.
-        sample_size (int): Number of items per sample.
-        probs (np.ndarray): Probability vector of shape (n_elements,).
-        elements (np.ndarray, optional): IDs to sample from. Defaults to np.arange(len(probs)).
+        Args:
+            num_samples (int): Number of rows to sample.
+            sample_size (int): Number of items per sample.
+            probs (np.ndarray): Probability vector of shape (n_elements,).
+            elements (np.ndarray, optional): IDs to sample from. Defaults to np.arange(len(probs)).
 
-    Returns:
-        np.ndarray: shape (num_samples, sample_size)
-    """
-    if elements is None:
-        elements = np.arange(len(probs))
-    else:
-        elements = np.asarray(elements)
+        Returns:
+            np.ndarray: shape (num_samples, sample_size)
+        """
+        if elements is None:
+            elements = np.arange(len(probs))
+        else:
+            elements = np.asarray(elements)
 
-    probs = np.asarray(probs, dtype=np.float32)
-    indices = _generate_shifted_indices(probs, num_samples, sample_size)
-    return elements[indices]
+        probs = np.asarray(probs, dtype=np.float32)
+        indices = _generate_shifted_indices(probs, num_samples, sample_size)
+        return elements[indices]
+else:
+    def _multidimensional_shifting_numba(
+        num_samples: int,
+        sample_size: int,
+        probs: np.ndarray,
+        elements: np.ndarray = None
+    ) -> np.ndarray:
+        """Fallback when numba is not available."""
+        return _multidimensional_shifting_fast(num_samples, sample_size, probs, elements)
 
 
 def parents(population: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -184,63 +236,4 @@ def parents(population: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
     fathers, mothers = np.array_split(population, 2)
     size = min(len(fathers), len(mothers))
-    return fathers[:size], mothers[:import numpy as np
-
-
-# --- Test ---
-def test_diversity_equivalence():
-    np.random.seed(42)
-    population = np.random.randint(0, 50, size=(100, 10))  # 100 samples, 10-player lineups
-
-    result_original = diversity_original(population)
-    result_optimized = diversity_optimized(population)
-
-    npt.assert_array_equal(result_original, result_optimized)
-    print("✅ Test passed: original and optimized versions produce the same result.")
-
-# Run test
-test_diversity_equivalence()
-
-
-def test_sampling_distribution():
-    np.random.seed(42)
-
-    # Setup
-    num_elements = 20
-    num_samples = 100_000
-    sample_size = 5
-
-    elements = np.arange(num_elements)
-    probs = np.random.dirichlet(np.ones(num_elements), size=1)[0].astype(np.float32)  # random valid probs
-
-    # Run sampling
-    samples = multidimensional_shifting_fast(
-        num_samples=num_samples,
-        sample_size=sample_size,
-        probs=probs,
-        elements=elements
-    )
-
-    # Count how often each element was selected
-    counts = np.bincount(samples.ravel(), minlength=num_elements)
-    empirical_probs = counts / (num_samples * sample_size)
-
-    # Chi-squared test
-    expected = probs * num_samples * sample_size
-    chi2, p_value = chisquare(counts, expected)
-
-    # Assert distribution is close (null hypothesis: observed == expected)
-    assert p_value > 0.01, f"Sampling distribution deviates significantly (p={p_value:.4f})"
-
-    print("✅ Sampling test passed. Empirical distribution is statistically consistent with target probabilities.")
-
-# Run test
-test_sampling_distribution()
-
-
-
-
-
-
-
-
+    return fathers[:size], mothers[:size]
