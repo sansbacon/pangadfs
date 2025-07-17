@@ -38,20 +38,11 @@ class PopulateDefault(PopulateBase):
             for pos, n in posmap.items()
         }
 
-        # Handle FLEX separately to maintain original behavior
-        if 'FLEX' in posmap:
-            # concatenate non-FLEX positions into single row
-            non_flex_samples = [pos_samples[pos] for pos in posmap if pos != 'FLEX']
-            if non_flex_samples:
-                pop = np.concatenate(non_flex_samples, axis=1)
-            else:
-                pop = np.empty((population_size, 0), dtype=int)
-            
-            # For FLEX, just take the first position for now (simple approach)
-            # This avoids the expensive duplicate checking while maintaining shape
-            flex_sample = pos_samples['FLEX'][:, :1]  # Take only first FLEX position
-            
-            return np.column_stack((pop, flex_sample))
-        else:
-            # No FLEX position, concatenate all
-            return np.concatenate([pos_samples[pos] for pos in posmap], axis=1)
+        # concatenate positions into single row
+        pop = np.concatenate([pos_samples[pos] for pos in posmap if pos != 'FLEX'], axis=1)
+
+        # find non-duplicate FLEX and aggregate with other positions
+        # https://stackoverflow.com/questions/65473095
+        # https://stackoverflow.com/questions/54155844/
+        dups = (pos_samples['FLEX'][..., None] == pop[:, None, :]).any(-1)
+        return np.column_stack((pop, pos_samples['FLEX'][np.invert(dups).cumsum(axis=1).cumsum(axis=1) == 1]))

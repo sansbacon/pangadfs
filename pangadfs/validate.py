@@ -3,6 +3,8 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the MIT License
 
+from typing import Dict
+
 import numpy as np
 from numpy_indexed import unique
 
@@ -28,6 +30,53 @@ class DuplicatesValidate(ValidateBase):
         # Use already sorted array for external duplicate removal
         population_clean_sorted = population_sorted[~has_internal_dups]
         return unique(population_clean_sorted)
+
+
+class FlexDuplicatesValidate(ValidateBase):
+    """
+    Validates that FLEX positions don't duplicate other positions.
+    This replaces the expensive duplicate checking that was in PopulateDefault.
+    Uses a more efficient vectorized approach.
+    """
+
+    def validate(self, *, population: np.ndarray, posmap: Dict[str, int] = None, **kwargs) -> np.ndarray:
+        if len(population) <= 1 or not posmap or 'FLEX' not in posmap:
+            return population
+        
+        # Calculate position boundaries
+        pos_boundaries = {}
+        start_idx = 0
+        for pos, count in posmap.items():
+            pos_boundaries[pos] = (start_idx, start_idx + count)
+            start_idx += count
+        
+        # Get FLEX and non-FLEX position indices
+        flex_start, flex_end = pos_boundaries['FLEX']
+        
+        # Extract FLEX and non-FLEX columns
+        flex_players = population[:, flex_start:flex_end]
+        non_flex_players = population[:, :flex_start]  # Only positions before FLEX
+        
+        # Use broadcasting to check for duplicates more efficiently
+        # This replicates the original logic but in a more efficient way
+        if non_flex_players.shape[1] > 0 and flex_players.shape[1] > 0:
+            # Check if any FLEX player appears in non-FLEX positions
+            dups = (flex_players[..., None] == non_flex_players[:, None, :]).any(-1)
+            
+            # Find valid FLEX players (those that don't duplicate)
+            valid_flex_mask = ~dups
+            
+            # For each row, select the first valid FLEX player for each FLEX position
+            valid_rows = []
+            for i in range(len(population)):
+                valid_flex_indices = np.where(valid_flex_mask[i])[0]
+                if len(valid_flex_indices) >= flex_players.shape[1]:
+                    # We have enough valid FLEX players
+                    valid_rows.append(i)
+            
+            return population[valid_rows] if valid_rows else population[:0]  # Return empty with correct shape
+        
+        return population
 
 
 class SalaryValidate(ValidateBase):
