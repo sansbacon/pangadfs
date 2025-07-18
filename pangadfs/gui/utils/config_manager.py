@@ -18,16 +18,17 @@ class ConfigManager:
         self.default_config_file = self.config_dir / 'default_config.json'
     
     def get_default_config(self) -> Dict[str, Any]:
-        """Get default configuration"""
+        """Get default configuration optimized for multilineup generation"""
         default_config = {
             'ga_settings': {
                 'csvpth': '',
                 'points_column': 'proj',
                 'position_column': 'pos',
                 'salary_column': 'salary',
-                'population_size': 30000,
-                'n_generations': 20,
-                'mutation_rate': 0.05,
+                # Optimized for set-based multilineup generation (aggressive balanced preset)
+                'population_size': 1000,  # Balanced: much better quality while still efficient
+                'n_generations': 100,     # More generations for better convergence
+                'mutation_rate': 0.15,    # Higher for better exploration in multilineup
                 'elite_divisor': 5,
                 'stop_criteria': 10,
                 'crossover_method': 'uniform',
@@ -35,10 +36,20 @@ class ConfigManager:
                 'elite_method': 'fittest',
                 'verbose': True,
                 'enable_profiling': True,
-                'target_lineups': 1,
-                'diversity_weight': 0.3,
-                'min_overlap_threshold': 0.3,
-                'diversity_method': 'jaccard'
+                # Multilineup defaults - enabled by default
+                'target_lineups': 10,    # Good balance of diversity and speed
+                'diversity_method': 'jaccard',
+                # Multi-objective optimizer settings (optimal defaults)
+                'optimizer_type': 'multi_objective',  # Use multi-objective optimization
+                'top_k_lineups': 10,                  # Top K lineups to optimize
+                'multi_objective_weights': (0.6, 0.3, 0.1),  # (top_k, total, diversity)
+                # Set-based optimizer fallback settings
+                'set_diversity_weight': 0.05,         # Quality-first: minimal diversity penalty
+                'tournament_size': 3,                  # Optimal for crossover
+                'lineup_pool_size': 100000,           # Balanced preset: much better quality sampling
+                # Post-processing fallback settings
+                'diversity_weight': 0.05,             # Quality-first: minimal diversity penalty
+                'min_overlap_threshold': 0.7,   # For post-processing approach
             },
             'site_settings': {
                 'salary_cap': 50000,
@@ -53,12 +64,12 @@ class ConfigManager:
                 },
                 'flex_positions': ('RB', 'WR', 'TE'),
                 'posfilter': {
-                    'QB': 0,
-                    'RB': 0,
-                    'WR': 0,
-                    'TE': 0,
-                    'DST': 0,
-                    'FLEX': 0
+                    'QB': 14,
+                    'RB': 8,
+                    'WR': 8,
+                    'TE': 5,
+                    'DST': 4,
+                    'FLEX': 8
                 }
             }
         }

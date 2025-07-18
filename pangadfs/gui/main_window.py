@@ -15,6 +15,7 @@ from .execution_panel import ExecutionPanel
 from .results_panel import ResultsPanel
 from .export_panel import ExportPanel
 from .utils.config_manager import ConfigManager
+from .theme_manager import ThemeManager
 
 
 class MainWindow:
@@ -23,8 +24,11 @@ class MainWindow:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("PangaDFS - Fantasy Sports Lineup Optimizer")
-        self.root.geometry("1200x800")
-        self.root.minsize(800, 600)
+        self.root.geometry("1400x900")
+        self.root.minsize(1000, 700)
+        
+        # Initialize theme manager first
+        self.theme_manager = ThemeManager(self.root, 'auto')
         
         # Application state
         self.config_manager = ConfigManager()
@@ -65,6 +69,20 @@ class MainWindow:
         menubar.add_cascade(label="Tools", menu=tools_menu)
         tools_menu.add_command(label="Validate Configuration", command=self._validate_config)
         tools_menu.add_command(label="Preview Player Pool", command=self._preview_player_pool)
+        tools_menu.add_separator()
+        
+        # Theme submenu
+        theme_menu = tk.Menu(tools_menu, tearoff=0)
+        tools_menu.add_cascade(label="Theme", menu=theme_menu)
+        theme_menu.add_command(label="Light Theme", command=lambda: self._switch_theme('light'))
+        theme_menu.add_command(label="Dark Theme", command=lambda: self._switch_theme('dark'))
+        theme_menu.add_separator()
+        theme_menu.add_command(label="Blue Theme", command=lambda: self._switch_theme('blue'))
+        theme_menu.add_command(label="Green Theme", command=lambda: self._switch_theme('green'))
+        theme_menu.add_command(label="Purple Theme", command=lambda: self._switch_theme('purple'))
+        theme_menu.add_command(label="Warm Theme", command=lambda: self._switch_theme('warm'))
+        theme_menu.add_separator()
+        theme_menu.add_command(label="Auto (System)", command=lambda: self._switch_theme('auto'))
         
         # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
@@ -74,28 +92,28 @@ class MainWindow:
     
     def _setup_main_interface(self):
         """Set up the main tabbed interface"""
-        # Create main notebook (tabbed interface)
+        # Create main notebook (tabbed interface) with no padding to maximize space
         self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
         
         # Configuration tab
         config_frame = ttk.Frame(self.notebook)
-        self.notebook.add(config_frame, text="Configuration")
+        self.notebook.add(config_frame, text="⚙️ Configuration")
         self.config_panel = ConfigPanel(config_frame, self._on_config_changed)
         
         # Execution tab
         execution_frame = ttk.Frame(self.notebook)
-        self.notebook.add(execution_frame, text="Run Optimization")
+        self.notebook.add(execution_frame, text="▶️ Run Optimization")
         self.execution_panel = ExecutionPanel(execution_frame, self._run_optimization, self._stop_optimization)
         
         # Results tab
         results_frame = ttk.Frame(self.notebook)
-        self.notebook.add(results_frame, text="Results")
+        self.notebook.add(results_frame, text="📊 Results")
         self.results_panel = ResultsPanel(results_frame)
         
         # Export tab
         export_frame = ttk.Frame(self.notebook)
-        self.notebook.add(export_frame, text="Export")
+        self.notebook.add(export_frame, text="💾 Export")
         self.export_panel = ExportPanel(export_frame, self._get_current_results)
         
         # Initially disable results and export tabs
@@ -280,16 +298,15 @@ class MainWindow:
                 dmgrs = {}
                 emgrs = {}
                 
-                # Determine which optimizer to use
-                target_lineups = config.get('ga_settings', {}).get('target_lineups', 1)
-                optimizer_name = 'optimize_multilineup' if target_lineups > 1 else 'optimize_default'
+                # Determine which optimizer to use based on config panel selection
+                optimizer_name = self.config_panel.get_optimizer_name()
                 
                 for ns in GeneticAlgorithm.PLUGIN_NAMESPACES:
                     pns = f'pangadfs.{ns}'
                     if ns == 'validate':
                         emgrs['validate'] = NamedExtensionManager(
                             namespace=pns, 
-                            names=['validate_salary', 'validate_duplicates'], 
+                            names=['validate_salary', 'validate_duplicates', 'validate_positions'], 
                             invoke_on_load=True, 
                             name_order=True)
                     elif ns == 'optimize':
@@ -361,7 +378,10 @@ class MainWindow:
         self.notebook.select(2)
         
         # Update status
-        num_lineups = len(results.get('lineups', [results.get('best_lineup')]))
+        if 'lineups' in results and results['lineups']:
+            num_lineups = len(results['lineups'])
+        else:
+            num_lineups = 1
         best_score = results.get('best_score', 0)
         self._update_status(f"Optimization complete: {num_lineups} lineup(s), best score: {best_score:.2f}")
     
@@ -435,6 +455,16 @@ Licensed under the MIT License"""
     def _show_documentation():
         """Show documentation"""
         messagebox.showinfo("Documentation", "Documentation is available in the docs/ folder and MULTILINEUP_README.md")
+    
+    def _switch_theme(self, theme_name: str):
+        """Switch to a different theme"""
+        if theme_name == 'auto':
+            # Re-detect system theme
+            self.theme_manager = ThemeManager(self.root, 'auto')
+        else:
+            self.theme_manager.switch_theme(theme_name)
+        
+        self._update_status(f"Switched to {theme_name} theme")
     
     def run(self):
         """Start the GUI application"""

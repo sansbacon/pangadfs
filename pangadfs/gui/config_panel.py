@@ -9,31 +9,42 @@ from pathlib import Path
 from typing import Dict, Any, Callable, Optional
 import pandas as pd
 from .widgets import PlayerPoolPanel
+from .utils.config_manager import ConfigManager
 
 
 class ConfigPanel:
-    """Configuration panel for GA and site settings"""
+    """Configuration panel for GA and site settings with mode-based interface"""
     
     def __init__(self, parent: tk.Widget, on_change_callback: Callable[[], None]):
         self.parent = parent
         self.on_change = on_change_callback
         self.config_vars = {}
+        self.posmap_vars = {}
+        self.posfilter_vars = {}
+        
+        # Initialize config manager to get default values
+        self.config_manager = ConfigManager()
+        self.default_config = self.config_manager.get_default_config()
+        
+        # Track current optimization mode
+        self.optimization_mode = tk.StringVar(value='multi_lineup')
+        self.optimization_mode.trace('w', self._on_mode_change)
         
         self._setup_ui()
     
     def _setup_ui(self):
         """Set up the configuration UI"""
-        # Create main horizontal paned window
+        # Create main horizontal paned window with minimal padding
         main_paned = ttk.PanedWindow(self.parent, orient=tk.HORIZONTAL)
-        main_paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        main_paned.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
         
-        # Left side - Configuration settings (40% width)
+        # Left side - Configuration settings (35% width)
         left_frame = ttk.Frame(main_paned)
-        main_paned.add(left_frame, weight=2)
+        main_paned.add(left_frame, weight=35)
         
-        # Right side - Player pool preview (60% width)
+        # Right side - Player pool preview (65% width)
         right_frame = ttk.Frame(main_paned)
-        main_paned.add(right_frame, weight=3)
+        main_paned.add(right_frame, weight=65)
         
         # Set up left side with scrollable configuration
         self._setup_config_side(left_frame)
@@ -60,9 +71,9 @@ class ConfigPanel:
         scrollbar.pack(side="right", fill="y")
         
         # Create configuration sections
+        self._create_mode_selector()
         self._create_file_section()
-        self._create_ga_settings_section()
-        self._create_multilineup_section()
+        self._create_optimization_settings()
         self._create_site_settings_section()
         
         # Bind mousewheel to canvas
@@ -75,10 +86,49 @@ class ConfigPanel:
         # Create player pool panel
         self.player_pool_panel = PlayerPoolPanel(parent, self._on_player_pool_change)
     
+    def _create_mode_selector(self):
+        """Create the optimization mode selector at the top"""
+        frame = ttk.LabelFrame(self.scrollable_frame, text="Optimization Mode", padding=10)
+        frame.pack(fill=tk.X, padx=3, pady=3)
+        
+        # Mode selection with radio buttons for clarity
+        mode_frame = ttk.Frame(frame)
+        mode_frame.pack(fill=tk.X)
+        
+        # Single lineup mode
+        single_rb = ttk.Radiobutton(
+            mode_frame,
+            text="Single Lineup - Generate 1 optimal lineup",
+            variable=self.optimization_mode,
+            value='single_lineup'
+        )
+        single_rb.pack(anchor=tk.W, pady=2)
+        
+        # Multi-lineup mode
+        multi_rb = ttk.Radiobutton(
+            mode_frame,
+            text="Multi-Lineup Optimization - Generate multiple diverse lineups (Recommended)",
+            variable=self.optimization_mode,
+            value='multi_lineup'
+        )
+        multi_rb.pack(anchor=tk.W, pady=2)
+        
+        # Help text
+        help_frame = ttk.Frame(frame)
+        help_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        self.mode_help_label = ttk.Label(
+            help_frame,
+            text="Choose between single optimal lineup or multiple diverse lineups",
+            font=('TkDefaultFont', 8),
+            foreground='gray'
+        )
+        self.mode_help_label.pack(anchor=tk.W)
+    
     def _create_file_section(self):
         """Create file selection section"""
-        frame = ttk.LabelFrame(self.scrollable_frame, text="Player Pool File", padding=10)
-        frame.pack(fill=tk.X, padx=5, pady=5)
+        frame = ttk.LabelFrame(self.scrollable_frame, text="Player Pool File", padding=8)
+        frame.pack(fill=tk.X, padx=3, pady=3)
         
         # File selection
         file_frame = ttk.Frame(frame)
@@ -123,20 +173,38 @@ class ConfigPanel:
             entry = ttk.Entry(row_frame, textvariable=self.config_vars[var_name], width=15)
             entry.pack(side=tk.LEFT, padx=(5, 0))
     
-    def _create_ga_settings_section(self):
-        """Create GA settings section"""
-        frame = ttk.LabelFrame(self.scrollable_frame, text="Genetic Algorithm Settings", padding=10)
-        frame.pack(fill=tk.X, padx=5, pady=5)
+    def _create_optimization_settings(self):
+        """Create optimization settings that change based on mode"""
+        self.optimization_frame = ttk.LabelFrame(self.scrollable_frame, text="Optimization Settings", padding=8)
+        self.optimization_frame.pack(fill=tk.X, padx=3, pady=3)
         
-        # Create two columns for GA settings
-        left_frame = ttk.Frame(frame)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # This will be populated based on the selected mode
+        self._update_optimization_settings()
+    
+    def _create_single_lineup_settings(self):
+        """Create settings for single lineup optimization"""
+        # Clear existing widgets
+        for widget in self.optimization_frame.winfo_children():
+            widget.destroy()
         
-        right_frame = ttk.Frame(frame)
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        # Single lineup description
+        desc_frame = ttk.Frame(self.optimization_frame)
+        desc_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # Left column settings
-        left_settings = [
+        desc_label = ttk.Label(
+            desc_frame,
+            text="Traditional GA optimization for one high-scoring lineup",
+            font=('TkDefaultFont', 9),
+            foreground='blue'
+        )
+        desc_label.pack(anchor=tk.W)
+        
+        # Basic GA settings for single lineup
+        settings_frame = ttk.Frame(self.optimization_frame)
+        settings_frame.pack(fill=tk.X)
+        
+        # Single lineup optimized settings
+        single_settings = [
             ('population_size', 'Population Size:', 30000, int),
             ('n_generations', 'Generations:', 20, int),
             ('mutation_rate', 'Mutation Rate:', 0.05, float),
@@ -144,8 +212,13 @@ class ConfigPanel:
             ('stop_criteria', 'Stop Criteria:', 10, int)
         ]
         
-        # Right column settings
-        right_settings = [
+        self._create_settings_grid(settings_frame, single_settings)
+        
+        # Advanced settings (collapsed by default)
+        advanced_frame = ttk.LabelFrame(self.optimization_frame, text="Advanced Settings", padding=5)
+        advanced_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        advanced_settings = [
             ('crossover_method', 'Crossover Method:', 'uniform', str),
             ('select_method', 'Selection Method:', 'tournament', str),
             ('elite_method', 'Elite Method:', 'fittest', str),
@@ -153,56 +226,180 @@ class ConfigPanel:
             ('enable_profiling', 'Enable Profiling:', True, bool)
         ]
         
-        self._create_settings_column(left_frame, left_settings)
-        self._create_settings_column(right_frame, right_settings)
+        self._create_settings_grid(advanced_frame, advanced_settings)
+        
+        # Set target_lineups to 1 for single lineup mode
+        self.config_vars['target_lineups'] = tk.StringVar(value='1')
     
-    def _create_multilineup_section(self):
-        """Create multilineup settings section"""
-        frame = ttk.LabelFrame(self.scrollable_frame, text="Multilineup Settings", padding=10)
-        frame.pack(fill=tk.X, padx=5, pady=5)
+    def _create_multi_lineup_settings(self):
+        """Create settings for multi-lineup optimization"""
+        # Clear existing widgets
+        for widget in self.optimization_frame.winfo_children():
+            widget.destroy()
         
-        # Enable multilineup checkbox
-        self.config_vars['enable_multilineup'] = tk.BooleanVar(value=False)
-        self.config_vars['enable_multilineup'].trace('w', self._on_multilineup_toggle)
+        # Multi-lineup description
+        desc_frame = ttk.Frame(self.optimization_frame)
+        desc_frame.pack(fill=tk.X, pady=(0, 10))
         
-        enable_cb = ttk.Checkbutton(
-            frame, 
-            text="Enable Multilineup Optimization", 
-            variable=self.config_vars['enable_multilineup']
+        desc_label = ttk.Label(
+            desc_frame,
+            text="Optimized for generating multiple diverse lineups (10-50x faster)",
+            font=('TkDefaultFont', 9),
+            foreground='green'
         )
-        enable_cb.pack(anchor=tk.W, pady=(0, 10))
+        desc_label.pack(anchor=tk.W)
         
-        # Multilineup settings frame (initially disabled)
-        self.multilineup_frame = ttk.Frame(frame)
-        self.multilineup_frame.pack(fill=tk.X)
+        # Quality preset selection (prominent)
+        preset_frame = ttk.Frame(self.optimization_frame)
+        preset_frame.pack(fill=tk.X, pady=(0, 10))
         
-        multilineup_settings = [
-            ('target_lineups', 'Target Lineups:', 150, int),
-            ('diversity_weight', 'Diversity Weight (0-1):', 0.3, float),
-            ('min_overlap_threshold', 'Min Overlap Threshold (0-1):', 0.3, float),
-            ('diversity_method', 'Diversity Method:', 'jaccard', str)
+        ttk.Label(preset_frame, text="Quality Preset:", width=20, font=('TkDefaultFont', 9, 'bold')).pack(side=tk.LEFT)
+        
+        self.config_vars['quality_preset'] = tk.StringVar(value='balanced')
+        self.config_vars['quality_preset'].trace('w', lambda *args: (self._update_quality_preset(), self.on_change()))
+        
+        preset_combo = ttk.Combobox(
+            preset_frame,
+            textvariable=self.config_vars['quality_preset'],
+            values=['speed', 'balanced', 'quality'],
+            state='readonly',
+            width=15
+        )
+        preset_combo.pack(side=tk.LEFT, padx=(5, 0))
+        
+        # Preset help text
+        self.preset_help_label = ttk.Label(
+            preset_frame,
+            text="Balanced: Good quality + speed (Recommended)",
+            font=('TkDefaultFont', 8),
+            foreground='gray'
+        )
+        self.preset_help_label.pack(side=tk.LEFT, padx=(10, 0))
+        
+        # Target lineups setting
+        target_frame = ttk.Frame(self.optimization_frame)
+        target_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Label(target_frame, text="Number of Lineups:", width=20, font=('TkDefaultFont', 9, 'bold')).pack(side=tk.LEFT)
+        
+        self.config_vars['target_lineups'] = tk.StringVar(value='10')
+        self.config_vars['target_lineups'].trace('w', lambda *args: self.on_change())
+        
+        target_entry = ttk.Entry(target_frame, textvariable=self.config_vars['target_lineups'], width=10)
+        target_entry.pack(side=tk.LEFT, padx=(5, 0))
+        
+        ttk.Label(target_frame, text="(Recommended: 5-20)", font=('TkDefaultFont', 8)).pack(side=tk.LEFT, padx=(5, 0))
+        
+        # Algorithm info (no selection needed - always use proven post-processing approach)
+        algorithm_frame = ttk.Frame(self.optimization_frame)
+        algorithm_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Label(algorithm_frame, text="Algorithm:", width=20, font=('TkDefaultFont', 9, 'bold')).pack(side=tk.LEFT)
+        
+        algorithm_info_label = ttk.Label(
+            algorithm_frame,
+            text="Post-processing Multi-lineup (Proven, Reliable)",
+            font=('TkDefaultFont', 9),
+            foreground='green'
+        )
+        algorithm_info_label.pack(side=tk.LEFT, padx=(5, 0))
+        
+        # Algorithm description
+        algorithm_desc_label = ttk.Label(
+            algorithm_frame,
+            text="Uses traditional GA + diversity post-processing for reliable results",
+            font=('TkDefaultFont', 8),
+            foreground='gray'
+        )
+        algorithm_desc_label.pack(side=tk.LEFT, padx=(10, 0))
+        
+        # GA settings optimized for multi-lineup
+        ga_frame = ttk.LabelFrame(self.optimization_frame, text="Algorithm Settings", padding=5)
+        ga_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        multi_settings = [
+            ('population_size', 'Population Size:', 1000, int),
+            ('n_generations', 'Generations:', 100, int),
+            ('mutation_rate', 'Mutation Rate:', 0.15, float),
+            ('set_diversity_weight', 'Diversity Weight:', 0.3, float),
+            ('lineup_pool_size', 'Lineup Pool Size:', 100000, int)
         ]
         
-        self._create_settings_column(self.multilineup_frame, multilineup_settings)
+        self._create_settings_grid(ga_frame, multi_settings)
         
-        # Initially disable multilineup settings
-        self._set_multilineup_enabled(False)
+        # Advanced settings (collapsed)
+        advanced_frame = ttk.LabelFrame(self.optimization_frame, text="Advanced Settings", padding=5)
+        advanced_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        advanced_settings = [
+            ('tournament_size', 'Tournament Size:', 3, int),
+            ('elite_divisor', 'Elite Divisor:', 5, int),
+            ('stop_criteria', 'Stop Criteria:', 10, int),
+            ('diversity_method', 'Diversity Method:', 'jaccard', str),
+            ('verbose', 'Verbose Output:', True, bool),
+            ('enable_profiling', 'Enable Profiling:', True, bool)
+        ]
+        
+        self._create_settings_grid(advanced_frame, advanced_settings)
+    
+    def _create_settings_grid(self, parent: tk.Widget, settings: list):
+        """Create a grid of settings widgets"""
+        for i, (var_name, label, default, var_type) in enumerate(settings):
+            row_frame = ttk.Frame(parent)
+            row_frame.pack(fill=tk.X, pady=2)
+            
+            ttk.Label(row_frame, text=label, width=20).pack(side=tk.LEFT)
+            
+            if var_type == bool:
+                if var_name not in self.config_vars:
+                    self.config_vars[var_name] = tk.BooleanVar(value=default)
+                widget = ttk.Checkbutton(row_frame, variable=self.config_vars[var_name])
+            elif var_name in ['crossover_method', 'select_method', 'elite_method', 'diversity_method']:
+                if var_name not in self.config_vars:
+                    self.config_vars[var_name] = tk.StringVar(value=default)
+                
+                # Create combobox with appropriate values
+                if var_name == 'crossover_method':
+                    values = ['uniform', 'single_point', 'two_point']
+                elif var_name == 'select_method':
+                    values = ['tournament', 'roulette', 'rank']
+                elif var_name == 'elite_method':
+                    values = ['fittest', 'diverse']
+                elif var_name == 'diversity_method':
+                    values = ['jaccard', 'hamming']
+                else:
+                    values = [default]
+                
+                widget = ttk.Combobox(row_frame, textvariable=self.config_vars[var_name], 
+                                    values=values, state='readonly', width=15)
+            else:
+                if var_name not in self.config_vars:
+                    self.config_vars[var_name] = tk.StringVar(value=str(default))
+                widget = ttk.Entry(row_frame, textvariable=self.config_vars[var_name], width=15)
+            
+            widget.pack(side=tk.LEFT, padx=(5, 0))
+            
+            # Add trace for change detection
+            if var_name not in self.config_vars or not hasattr(self.config_vars[var_name], '_trace_vinfo'):
+                self.config_vars[var_name].trace('w', lambda *args: self.on_change())
     
     def _create_site_settings_section(self):
         """Create site settings section"""
-        frame = ttk.LabelFrame(self.scrollable_frame, text="Site Settings", padding=10)
-        frame.pack(fill=tk.X, padx=5, pady=5)
+        frame = ttk.LabelFrame(self.scrollable_frame, text="Site Settings", padding=8)
+        frame.pack(fill=tk.X, padx=3, pady=3)
         
         # Basic settings
         basic_frame = ttk.Frame(frame)
         basic_frame.pack(fill=tk.X, pady=(0, 10))
         
+        # Get default basic settings from config manager
+        default_site_settings = self.default_config.get('site_settings', {})
         basic_settings = [
-            ('salary_cap', 'Salary Cap:', 50000, int),
-            ('lineup_size', 'Lineup Size:', 9, int)
+            ('salary_cap', 'Salary Cap:', default_site_settings.get('salary_cap', 50000), int),
+            ('lineup_size', 'Lineup Size:', default_site_settings.get('lineup_size', 9), int)
         ]
         
-        self._create_settings_column(basic_frame, basic_settings)
+        self._create_settings_grid(basic_frame, basic_settings)
         
         # Position settings
         pos_frame = ttk.LabelFrame(frame, text="Position Settings", padding=5)
@@ -217,10 +414,11 @@ class ConfigPanel:
         posmap_grid = ttk.Frame(posmap_frame)
         posmap_grid.pack(fill=tk.X, pady=2)
         
-        # Default position map
-        default_posmap = {'QB': 1, 'RB': 2, 'WR': 3, 'TE': 1, 'DST': 1, 'FLEX': 1}
+        # Get default position map from config manager
+        default_posmap = self.default_config.get('site_settings', {}).get('posmap', {
+            'QB': 1, 'RB': 2, 'WR': 3, 'TE': 1, 'DST': 1, 'FLEX': 1
+        })
         
-        self.posmap_vars = {}
         for i, (pos, count) in enumerate(default_posmap.items()):
             row = i // 3
             col = i % 3
@@ -242,7 +440,10 @@ class ConfigPanel:
         
         ttk.Label(flex_frame, text="Flex Positions:", font=('TkDefaultFont', 9, 'bold')).pack(anchor=tk.W)
         
-        self.config_vars['flex_positions'] = tk.StringVar(value='RB,WR,TE')
+        # Get default flex positions from config manager
+        default_flex_positions = self.default_config.get('site_settings', {}).get('flex_positions', ('RB', 'WR', 'TE'))
+        flex_positions_str = ','.join(default_flex_positions)
+        self.config_vars['flex_positions'] = tk.StringVar(value=flex_positions_str)
         self.config_vars['flex_positions'].trace('w', lambda *args: self.on_change())
         
         flex_entry = ttk.Entry(flex_frame, textvariable=self.config_vars['flex_positions'], width=30)
@@ -259,10 +460,11 @@ class ConfigPanel:
         posfilter_grid = ttk.Frame(posfilter_frame)
         posfilter_grid.pack(fill=tk.X, pady=2)
         
-        # Default position filters
-        default_posfilter = {'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'DST': 0, 'FLEX': 0}
+        # Get default position filters from config manager
+        default_posfilter = self.default_config.get('site_settings', {}).get('posfilter', {
+            'QB': 0, 'RB': 0, 'WR': 0, 'TE': 0, 'DST': 0, 'FLEX': 0
+        })
         
-        self.posfilter_vars = {}
         for i, (pos, thresh) in enumerate(default_posfilter.items()):
             row = i // 3
             col = i % 3
@@ -273,47 +475,103 @@ class ConfigPanel:
             ttk.Label(pos_filter_item, text=f"{pos}:", width=6).pack(side=tk.LEFT)
             
             self.posfilter_vars[pos] = tk.StringVar(value=str(thresh))
-            self.posfilter_vars[pos].trace('w', lambda *args: self.on_change())
+            self.posfilter_vars[pos].trace('w', lambda *args: (self.on_change(), self._update_position_filters()))
             
             entry = ttk.Entry(pos_filter_item, textvariable=self.posfilter_vars[pos], width=8)
             entry.pack(side=tk.LEFT)
     
-    def _create_settings_column(self, parent: tk.Widget, settings: list):
-        """Create a column of settings widgets"""
-        for var_name, label, default, var_type in settings:
-            row_frame = ttk.Frame(parent)
-            row_frame.pack(fill=tk.X, pady=2)
+    def _on_mode_change(self, *args):
+        """Handle optimization mode change"""
+        self._update_optimization_settings()
+        self._update_mode_help()
+        self.on_change()
+    
+    def _update_optimization_settings(self):
+        """Update optimization settings based on selected mode"""
+        mode = self.optimization_mode.get()
+        
+        if mode == 'single_lineup':
+            self._create_single_lineup_settings()
+        else:  # multi_lineup
+            self._create_multi_lineup_settings()
+    
+    def _update_mode_help(self):
+        """Update mode help text"""
+        mode = self.optimization_mode.get()
+        
+        if mode == 'single_lineup':
+            self.mode_help_label.config(
+                text="Single Lineup Optimization: Traditional GA for one high-scoring lineup"
+            )
+        else:
+            self.mode_help_label.config(
+                text="Multi-Lineup Optimization: Proven algorithm for multiple diverse lineups"
+            )
+    
+    def _update_optimizer_help(self):
+        """Update optimizer help text"""
+        if hasattr(self, 'optimizer_help_label'):
+            optimizer_type = self.config_vars.get('optimizer_type', tk.StringVar(value='set_based')).get()
             
-            ttk.Label(row_frame, text=label, width=20).pack(side=tk.LEFT)
-            
-            if var_type == bool:
-                self.config_vars[var_name] = tk.BooleanVar(value=default)
-                widget = ttk.Checkbutton(row_frame, variable=self.config_vars[var_name])
-            elif var_name in ['crossover_method', 'select_method', 'elite_method', 'diversity_method']:
-                self.config_vars[var_name] = tk.StringVar(value=default)
-                
-                # Create combobox with appropriate values
-                if var_name == 'crossover_method':
-                    values = ['uniform', 'single_point', 'two_point']
-                elif var_name == 'select_method':
-                    values = ['tournament', 'roulette', 'rank']
-                elif var_name == 'elite_method':
-                    values = ['fittest', 'diverse']
-                elif var_name == 'diversity_method':
-                    values = ['jaccard', 'hamming']
-                else:
-                    values = [default]
-                
-                widget = ttk.Combobox(row_frame, textvariable=self.config_vars[var_name], 
-                                    values=values, state='readonly', width=15)
+            if optimizer_type == 'set_based':
+                self.optimizer_help_label.config(
+                    text="Set-based: Ultra-fast algorithm (Recommended)"
+                )
             else:
-                self.config_vars[var_name] = tk.StringVar(value=str(default))
-                widget = ttk.Entry(row_frame, textvariable=self.config_vars[var_name], width=15)
+                self.optimizer_help_label.config(
+                    text="Post-processing: Traditional approach (slower)"
+                )
+    
+    def _update_quality_preset(self):
+        """Update settings based on quality preset selection"""
+        if not hasattr(self, 'preset_help_label'):
+            return
             
-            widget.pack(side=tk.LEFT, padx=(5, 0))
+        preset = self.config_vars.get('quality_preset', tk.StringVar(value='balanced')).get()
+        
+        # Define preset configurations for post-processing optimizer only
+        presets = {
+            'speed': {
+                'population_size': 500,
+                'n_generations': 50,
+                'mutation_rate': 0.20,
+                'diversity_weight': 0.15,
+                'min_overlap_threshold': 0.5,
+                'help_text': "Speed: Fast results with good diversity",
+                'description': "Optimized for speed with good diversity"
+            },
+            'balanced': {
+                'population_size': 1000,
+                'n_generations': 100,
+                'mutation_rate': 0.15,
+                'diversity_weight': 0.20,
+                'min_overlap_threshold': 0.4,
+                'help_text': "Balanced: Good quality + diversity (Recommended)",
+                'description': "Recommended balance of quality and diversity"
+            },
+            'quality': {
+                'population_size': 2000,
+                'n_generations': 200,
+                'mutation_rate': 0.10,
+                'diversity_weight': 0.25,
+                'min_overlap_threshold': 0.3,
+                'help_text': "Quality: Maximum quality + diversity",
+                'description': "Best quality with strong diversity enforcement"
+            }
+        }
+        
+        if preset in presets:
+            preset_config = presets[preset]
             
-            # Add trace for change detection
-            self.config_vars[var_name].trace('w', lambda *args: self.on_change())
+            # Update settings
+            for setting, value in preset_config.items():
+                if setting in ['help_text', 'description']:
+                    continue
+                if setting in self.config_vars:
+                    self.config_vars[setting].set(str(value))
+            
+            # Update help text
+            self.preset_help_label.config(text=preset_config['help_text'])
     
     def _browse_csv_file(self):
         """Browse for CSV file"""
@@ -350,41 +608,43 @@ class ConfigPanel:
             # If auto-detection fails, just continue with defaults
             pass
     
-    def _on_multilineup_toggle(self, *args):
-        """Handle multilineup enable/disable"""
-        enabled = self.config_vars['enable_multilineup'].get()
-        self._set_multilineup_enabled(enabled)
+    def _load_player_pool(self):
+        """Load player pool into the preview panel"""
+        csv_path = self.config_vars.get('csvpth', tk.StringVar()).get()
+        if not csv_path or not Path(csv_path).exists():
+            return
         
-        # Set target_lineups based on multilineup setting
-        if enabled:
-            if 'target_lineups' not in self.config_vars:
-                self.config_vars['target_lineups'] = tk.StringVar(value='150')
-            else:
-                current_val = self.config_vars['target_lineups'].get()
-                if current_val == '1':
-                    self.config_vars['target_lineups'].set('150')
-        else:
-            if 'target_lineups' in self.config_vars:
-                self.config_vars['target_lineups'].set('1')
+        # Get column mapping
+        column_mapping = {
+            'position_column': self.config_vars.get('position_column', tk.StringVar(value='pos')).get(),
+            'salary_column': self.config_vars.get('salary_column', tk.StringVar(value='salary')).get(),
+            'points_column': self.config_vars.get('points_column', tk.StringVar(value='proj')).get()
+        }
         
+        # Load into player pool panel
+        self.player_pool_panel.load_player_pool(csv_path, column_mapping)
+        
+        # Apply current position filters
+        self._update_position_filters()
+    
+    def _on_player_pool_change(self):
+        """Handle changes in the player pool panel"""
+        # Notify parent of change
         self.on_change()
     
-    def _set_multilineup_enabled(self, enabled: bool):
-        """Enable/disable multilineup settings widgets"""
-        state = 'normal' if enabled else 'disabled'
+    def _update_position_filters(self):
+        """Update position filters in the player pool panel"""
+        # Get current position filter values
+        position_filters = {}
+        for pos, var in self.posfilter_vars.items():
+            try:
+                value = float(var.get())
+                position_filters[pos] = value
+            except ValueError:
+                position_filters[pos] = 0.0
         
-        for widget in self.multilineup_frame.winfo_children():
-            self._set_widget_state_recursive(widget, state)
-    
-    def _set_widget_state_recursive(self, widget, state):
-        """Recursively set widget state"""
-        try:
-            widget.configure(state=state)
-        except tk.TclError:
-            pass  # Some widgets don't support state
-        
-        for child in widget.winfo_children():
-            self._set_widget_state_recursive(child, state)
+        # Apply to player pool panel
+        self.player_pool_panel.set_position_filters(position_filters)
     
     def get_config(self) -> Dict[str, Any]:
         """Get current configuration as dictionary"""
@@ -393,32 +653,34 @@ class ConfigPanel:
             'site_settings': {}
         }
         
-        # GA settings
+        # Basic GA settings
         ga_settings = [
             'csvpth', 'points_column', 'position_column', 'salary_column',
             'population_size', 'n_generations', 'mutation_rate', 'elite_divisor',
             'stop_criteria', 'crossover_method', 'select_method', 'elite_method',
-            'verbose', 'enable_profiling'
+            'verbose', 'enable_profiling', 'target_lineups'
         ]
         
-        # Add multilineup settings if enabled
-        if self.config_vars.get('enable_multilineup', tk.BooleanVar()).get():
-            ga_settings.extend(['target_lineups', 'diversity_weight', 'min_overlap_threshold', 'diversity_method'])
-        else:
-            # Ensure target_lineups is 1 for single lineup mode
-            config['ga_settings']['target_lineups'] = 1
+        # Add mode-specific settings
+        mode = self.optimization_mode.get()
+        if mode == 'multi_lineup':
+            # Add multilineup-specific settings for post-processing optimizer
+            ga_settings.extend([
+                'diversity_method', 'set_diversity_weight', 'tournament_size', 
+                'lineup_pool_size', 'diversity_weight', 'min_overlap_threshold'
+            ])
         
         for setting in ga_settings:
             if setting in self.config_vars:
                 value = self.config_vars[setting].get()
                 
                 # Convert types
-                if setting in ['population_size', 'n_generations', 'elite_divisor', 'stop_criteria', 'target_lineups']:
+                if setting in ['population_size', 'n_generations', 'elite_divisor', 'stop_criteria', 'target_lineups', 'tournament_size', 'lineup_pool_size']:
                     try:
                         value = int(value)
                     except ValueError:
                         value = 0
-                elif setting in ['mutation_rate', 'diversity_weight', 'min_overlap_threshold']:
+                elif setting in ['mutation_rate', 'diversity_weight', 'min_overlap_threshold', 'set_diversity_weight']:
                     try:
                         value = float(value)
                     except ValueError:
@@ -459,6 +721,17 @@ class ConfigPanel:
         # Load GA settings
         ga_settings = config.get('ga_settings', {})
         
+        # Determine mode based on target_lineups
+        target_lineups = ga_settings.get('target_lineups', 10)
+        if target_lineups == 1:
+            self.optimization_mode.set('single_lineup')
+        else:
+            self.optimization_mode.set('multi_lineup')
+        
+        # Update UI based on mode
+        self._update_optimization_settings()
+        
+        # Load settings
         for setting, value in ga_settings.items():
             if setting in self.config_vars:
                 if isinstance(value, Path):
@@ -491,37 +764,12 @@ class ConfigPanel:
         for pos, thresh in posfilter.items():
             if pos in self.posfilter_vars:
                 self.posfilter_vars[pos].set(str(thresh))
-        
-        # Set multilineup checkbox based on target_lineups
-        target_lineups = ga_settings.get('target_lineups', 1)
-        self.config_vars['enable_multilineup'].set(target_lineups > 1)
     
     def set_player_pool_file(self, filename: str):
         """Set the player pool file"""
         self.config_vars['csvpth'].set(filename)
         self._auto_detect_columns(filename)
         self._load_player_pool()
-    
-    def _load_player_pool(self):
-        """Load player pool into the preview panel"""
-        csv_path = self.config_vars.get('csvpth', tk.StringVar()).get()
-        if not csv_path or not Path(csv_path).exists():
-            return
-        
-        # Get column mapping
-        column_mapping = {
-            'position_column': self.config_vars.get('position_column', tk.StringVar(value='pos')).get(),
-            'salary_column': self.config_vars.get('salary_column', tk.StringVar(value='salary')).get(),
-            'points_column': self.config_vars.get('points_column', tk.StringVar(value='proj')).get()
-        }
-        
-        # Load into player pool panel
-        self.player_pool_panel.load_player_pool(csv_path, column_mapping)
-    
-    def _on_player_pool_change(self):
-        """Handle changes in the player pool panel"""
-        # Notify parent of change
-        self.on_change()
     
     def get_modified_player_data(self) -> Optional[pd.DataFrame]:
         """Get the modified player pool data"""
@@ -530,3 +778,13 @@ class ConfigPanel:
     def has_player_pool_modifications(self) -> bool:
         """Check if there are player pool modifications"""
         return self.player_pool_panel.has_modifications()
+    
+    def get_optimizer_name(self) -> str:
+        """Get the optimizer name based on current settings"""
+        mode = self.optimization_mode.get()
+        
+        if mode == 'single_lineup':
+            return 'optimize_default'
+        else:
+            # Always use post-processing multilineup optimizer (proven, reliable)
+            return 'optimize_multilineup'

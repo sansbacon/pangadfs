@@ -30,7 +30,10 @@ def run():
           'pangadfs.fitness': ['fitness_default = pangadfs.fitness:FitnessDefault'],
           'pangadfs.mutate': ['mutate_default = pangadfs.mutate:MutateDefault'],
           'pangadfs.optimize': ['optimize_default = pangadfs.optimize:OptimizeDefault',
-                                'optimize_multilineup = pangadfs.optimize:OptimizeMultilineup'],
+                                'optimize_multilineup = pangadfs.optimize:OptimizeMultilineup',
+                                'optimize_multilineup_sets = pangadfs.optimize:OptimizeMultilineupSets',
+                                'optimize_pool_based_sets = pangadfs.optimize_pool_based:OptimizePoolBasedSets',
+                                'optimize_multi_objective = pangadfs.optimize_multi_objective:OptimizeMultiObjective'],
           'pangadfs.penalty': ['distance_penalty = pangadfs.penalty.DistancePenalty',
                                'diversity_penalty = pangadfs.penalty.DiversityPenalty',
                                'ownership_penalty = pangadfs.penalty.OwnershipPenalty',
@@ -41,7 +44,8 @@ def run():
           'pangadfs.pospool': ['pospool_default = pangadfs.pospool:PospoolDefault'],
           'pangadfs.select': ['select_default = pangadfs.select:SelectDefault'],
           'pangadfs.validate': ['validate_salary = pangadfs.validate:SalaryValidate',
-                                'validate_duplicates = pangadfs.validate:DuplicatesValidate']
+                                'validate_duplicates = pangadfs.validate:DuplicatesValidate',
+                                'validate_positions = pangadfs.validate_positions:PositionValidate']
         },
         zip_safe=False,
         classifiers=[
