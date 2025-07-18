@@ -53,6 +53,31 @@ def diversity_optimized(population: np.ndarray) -> np.ndarray:
     return a @ a.T
 
 
+def calculate_jaccard_diversity(lineup1, lineup2):
+    """Calculate Jaccard diversity between two lineups
+    
+    Args:
+        lineup1: First lineup (array-like of player IDs)
+        lineup2: Second lineup (array-like of player IDs)
+    
+    Returns:
+        float: Jaccard diversity (1 - Jaccard similarity)
+    
+    Examples:
+        >>> lineup1 = [1, 2, 3, 4, 5]
+        >>> lineup2 = [1, 2, 6, 7, 8]
+        >>> diversity = calculate_jaccard_diversity(lineup1, lineup2)
+        >>> print(f"Diversity: {diversity:.3f}")
+        Diversity: 0.667
+    """
+    set1 = set(lineup1)
+    set2 = set(lineup2)
+    intersection = len(set1.intersection(set2))
+    union = len(set1.union(set2))
+    similarity = intersection / union if union > 0 else 0.0
+    return 1.0 - similarity  # diversity = 1 - similarity
+
+
 def exposure(population: np.ndarray = None) -> Dict[int, int]:
     """Returns dict of index: count of individuals
 
@@ -185,4 +210,3 @@ def parents(population: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     fathers, mothers = np.array_split(population, 2)
     size = min(len(fathers), len(mothers))
     return fathers[:size], mothers[:size]
-

@@ -23,7 +23,7 @@ class GeneticAlgorithm:
        'select', 'crossover', 'mutate', 'validate'
     )
 
-    VALIDATE_PLUGINS = ('validate_salary', 'validate_duplicates')
+    VALIDATE_PLUGINS = ('validate_salary', 'validate_duplicates', 'validate_positions')
 
     def __init__(self, 
                  ctx: Union[Dict, Any] = None,

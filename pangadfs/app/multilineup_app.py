@@ -21,14 +21,14 @@ def run_multilineup():
             'csvpth': Path(__file__).parent / 'appdata' / 'pool.csv',
             'elite_divisor': 5,
             'elite_method': 'fittest',
-            'mutation_rate': .05,
-            'n_generations': 20,
+            'mutation_rate': .15,  # Higher mutation rate for more diversity
+            'n_generations': 30,   # More generations
             'points_column': 'proj',
-            'population_size': 30000,
+            'population_size': 100000,
             'position_column': 'pos',
             'salary_column': 'salary',
-            'select_method': 'tournament',
-            'stop_criteria': 10,
+            'select_method': 'roulette',  # Roulette selection for more diversity
+            'stop_criteria': 15,  # Allow more generations without improvement
             'verbose': True,
             'enable_profiling': True,
             
@@ -43,7 +43,7 @@ def run_multilineup():
             'flex_positions': ('RB', 'WR', 'TE'),
             'lineup_size': 9,
             'posfilter': {'QB': 14, 'RB': 8, 'WR': 8, 'TE': 5, 'DST': 4, 'FLEX': 8},
-            'posmap': {'DST': 1, 'QB': 1, 'TE': 1, 'RB': 2, 'WR': 3, 'FLEX': 7},
+            'posmap': {'DST': 1, 'QB': 1, 'TE': 1, 'RB': 2, 'WR': 3, 'FLEX': 1},
             'salary_cap': 50000
         }
     }

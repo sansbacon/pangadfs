@@ -47,9 +47,9 @@ class PopulateDefault(PopulateBase):
             else:
                 pop = np.empty((population_size, 0), dtype=int)
             
-            # For FLEX, just take the first position for now (simple approach)
-            # This avoids the expensive duplicate checking while maintaining shape
-            flex_sample = pos_samples['FLEX'][:, :1]  # Take only first FLEX position
+            # For FLEX, take the correct number of positions as specified in posmap
+            flex_count = posmap['FLEX']
+            flex_sample = pos_samples['FLEX'][:, :flex_count]  # Take correct number of FLEX positions
             
             return np.column_stack((pop, flex_sample))
         else:

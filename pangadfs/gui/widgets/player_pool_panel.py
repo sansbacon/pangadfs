@@ -42,6 +42,10 @@ class PlayerPoolPanel:
         # Control frame
         self._create_control_frame(main_frame)
         
+        # Position filters from config (will be set externally)
+        self.position_filters: Dict[str, float] = {}
+        self.show_excluded = True
+        
         # Data table frame
         self._create_table_frame(main_frame)
         
@@ -85,6 +89,16 @@ class PlayerPoolPanel:
         # Clear filters button
         clear_btn = ttk.Button(filter_frame, text="Clear Filters", command=self._clear_filters)
         clear_btn.pack(side=tk.LEFT, padx=(5, 0))
+        
+        # Show/Hide excluded players toggle
+        self.show_excluded_var = tk.BooleanVar(value=True)
+        show_excluded_cb = ttk.Checkbutton(
+            filter_frame, 
+            text="Show Excluded", 
+            variable=self.show_excluded_var,
+            command=self._on_show_excluded_change
+        )
+        show_excluded_cb.pack(side=tk.RIGHT, padx=(10, 0))
         
         # Bottom row - actions
         action_frame = ttk.Frame(control_frame)
@@ -318,6 +332,10 @@ class PlayerPoolPanel:
             team_matches = filtered.get('team', pd.Series()).str.lower().str.contains(search_lower, na=False)
             filtered = filtered[player_matches | team_matches]
         
+        # Show/hide excluded players filter
+        if not self.show_excluded_var.get():
+            filtered = filtered[~filtered['player'].isin(self.excluded_players)]
+        
         return filtered
     
     def _get_data_column(self, display_column: str) -> str:
@@ -359,6 +377,11 @@ class PlayerPoolPanel:
         self.search_var.set("")
         self.position_filter = "All"
         self.search_text = ""
+        self._refresh_tree_data()
+        self._update_status()
+    
+    def _on_show_excluded_change(self):
+        """Handle show/hide excluded players toggle"""
         self._refresh_tree_data()
         self._update_status()
     
@@ -536,14 +559,13 @@ class PlayerPoolPanel:
         total_players = len(self.modified_data)
         visible_players = len(filtered_data)
         excluded_count = len(self.excluded_players)
+        included_count = total_players - excluded_count
         modified_count = len(self.projection_changes)
         
-        status_text = f"Players: {visible_players}"
-        if visible_players != total_players:
-            status_text += f" of {total_players}"
+        status_text = f"Total: {total_players} | Included: {included_count} | Excluded: {excluded_count}"
         
-        if excluded_count > 0:
-            status_text += f" | Excluded: {excluded_count}"
+        if visible_players != total_players:
+            status_text = f"Showing: {visible_players} | " + status_text
         
         if modified_count > 0:
             status_text += f" | Modified: {modified_count}"
@@ -586,6 +608,48 @@ class PlayerPoolPanel:
     def has_modifications(self) -> bool:
         """Check if there are any modifications"""
         return bool(self.excluded_players or self.projection_changes)
+    
+    def set_position_filters(self, position_filters: Dict[str, float]):
+        """Set position filters from configuration and apply them"""
+        self.position_filters = position_filters.copy()
+        self._apply_position_filters()
+    
+    def _apply_position_filters(self):
+        """Apply position filters by excluding players below thresholds"""
+        if not self.position_filters or self.modified_data is None:
+            return
+        
+        pos_col = self.column_mapping.get('position')
+        points_col = self.column_mapping.get('points')
+        
+        if not pos_col or not points_col:
+            return
+        
+        # First, remove any players that were previously excluded by position filters
+        # We'll track this by storing which players were excluded by filters
+        if not hasattr(self, 'filter_excluded_players'):
+            self.filter_excluded_players = set()
+        
+        # Remove previously filter-excluded players from the main excluded set
+        self.excluded_players -= self.filter_excluded_players
+        self.filter_excluded_players.clear()
+        
+        # Apply current position filters
+        for position, min_points in self.position_filters.items():
+            if min_points > 0:  # Only apply if threshold is set
+                # Find players in this position below the threshold
+                position_mask = self.modified_data[pos_col] == position
+                points_mask = self.modified_data[points_col] < min_points
+                below_threshold = self.modified_data[position_mask & points_mask]['player'].tolist()
+                
+                # Add to both sets
+                self.filter_excluded_players.update(below_threshold)
+                self.excluded_players.update(below_threshold)
+        
+        # Refresh display
+        self._refresh_tree_data()
+        self._update_status()
+        self.on_change()
 
 
 class ProjectionEditDialog:
