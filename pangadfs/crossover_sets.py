@@ -3,7 +3,6 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the MIT License
 
-import logging
 from typing import Dict, Any
 import numpy as np
 from pangadfs.base import CrossoverBase
@@ -96,8 +95,8 @@ class CrossoverMultilineupSets(CrossoverBase):
         
         return child1, child2
     
-    def _tournament_select_lineup(self, 
-                                parent_set: np.ndarray, 
+    @staticmethod
+    def _tournament_select_lineup(parent_set: np.ndarray, 
                                 tournament_size: int) -> np.ndarray:
         """
         Select a lineup from parent set using tournament selection

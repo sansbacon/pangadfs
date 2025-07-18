@@ -32,7 +32,7 @@ def test_function():
         diversity = calculate_jaccard_diversity(lineup1, lineup2)
         expected = 1.0 - (2/8)  # 2 intersection, 8 union -> 0.75 diversity
         
-        print(f"Test lineups:")
+        print("Test lineups:")
         print(f"  Lineup 1: {lineup1}")
         print(f"  Lineup 2: {lineup2}")
         print(f"  Calculated diversity: {diversity:.3f}")

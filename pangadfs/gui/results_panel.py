@@ -1,7 +1,3 @@
-# pangadfs/gui/results_panel.py
-# -*- coding: utf-8 -*-
-# Copyright (C) 2020 Eric Truett
-# Licensed under the MIT License
 
 import tkinter as tk
 from tkinter import ttk
@@ -515,7 +511,6 @@ class ResultsPanel:
             else:
                 values.append('')
             
-            # RB (2) - RB1, RB2
             rb_count = 0
             for _ in range(2):  # RB1, RB2
                 if 'RB' in players_by_pos and len(players_by_pos['RB']) > rb_count:
@@ -524,7 +519,6 @@ class ResultsPanel:
                 else:
                     values.append('')
             
-            # WR (3) - WR1, WR2, WR3
             wr_count = 0
             for _ in range(3):  # WR1, WR2, WR3
                 if 'WR' in players_by_pos and len(players_by_pos['WR']) > wr_count:
@@ -533,7 +527,6 @@ class ResultsPanel:
                 else:
                     values.append('')
             
-            # TE (1)
             if 'TE' in players_by_pos and players_by_pos['TE']:
                 values.append(players_by_pos['TE'][0])
             else:
@@ -552,7 +545,6 @@ class ResultsPanel:
                 flex_player = players_by_pos['TE'][1]
             values.append(flex_player)
             
-            # DST (1)
             if 'DST' in players_by_pos and players_by_pos['DST']:
                 values.append(players_by_pos['DST'][0])
             else:
@@ -803,7 +795,8 @@ class ResultsPanel:
             'insights': insights
         }
     
-    def _analyze_position_overlap(self, position_usage, total_lineups):
+    @staticmethod
+    def _analyze_position_overlap(position_usage, total_lineups):
         """Analyze overlap by position"""
         position_overlap = {}
         
@@ -828,7 +821,8 @@ class ResultsPanel:
         
         return position_overlap
     
-    def _detect_stacks(self, lineups, team_usage):
+    @staticmethod
+    def _detect_stacks(lineups, team_usage):
         """Detect QB-WR stacks and team correlations"""
         stacks = {
             'qb_wr_stacks': {},
@@ -888,7 +882,8 @@ class ResultsPanel:
         
         return stacks
     
-    def _generate_overlap_insights(self, player_usage, position_overlap, stacks, total_lineups):
+    @staticmethod
+    def _generate_overlap_insights(player_usage, position_overlap, stacks, total_lineups):
         """Generate actionable insights and recommendations"""
         insights = []
         
@@ -928,7 +923,7 @@ class ResultsPanel:
             insights.append(f"💡 RECOMMENDATION: {worst_pos[0]} position needs more diversity")
         
         if len(unique_players) < total_lineups * 2:
-            insights.append(f"💡 RECOMMENDATION: Consider increasing diversity settings for more unique players")
+            insights.append("💡 RECOMMENDATION: Consider increasing diversity settings for more unique players")
         
         return insights
     

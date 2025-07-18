@@ -82,7 +82,7 @@ def test_optimizer_performance(optimizer_name, config, test_name):
     print(f"\n{'='*60}")
     print(f"Testing {test_name}")
     print(f"{'='*60}")
-    print(f"Configuration:")
+    print("Configuration:")
     print(f"  - Population size: {config['ga_settings']['population_size']}")
     print(f"  - Target lineups: {config['ga_settings']['target_lineups']}")
     print(f"  - Lineup pool size: {config['ga_settings']['lineup_pool_size']}")
@@ -114,9 +114,9 @@ def test_optimizer_performance(optimizer_name, config, test_name):
                 avg_overlap = results['diversity_metrics'].get('avg_overlap', 0.0)
                 avg_diversity = 1.0 - avg_overlap
             
-            print(f"\n✅ SUCCESS!")
+            print("\n✅ SUCCESS!")
             print(f"⏱️  Total time: {elapsed_time:.2f} seconds")
-            print(f"📊 Results:")
+            print("📊 Results:")
             print(f"  - Generated {n_lineups} lineups")
             print(f"  - Best score: {best_score}")
             print(f"  - Average diversity: {avg_diversity:.3f}")
@@ -130,7 +130,7 @@ def test_optimizer_performance(optimizer_name, config, test_name):
                 'time_per_lineup': elapsed_time/n_lineups
             }
         else:
-            print(f"❌ No lineups generated")
+            print("❌ No lineups generated")
             return {'success': False, 'time': elapsed_time}
             
     except Exception as e:
@@ -201,7 +201,7 @@ def run_performance_comparison():
         else:
             print(f"  ❌ Optimized: FAILED ({opt.get('time', 0):.2f}s)")
     
-    print(f"\n🎯 KEY OPTIMIZATIONS IMPLEMENTED:")
+    print("\n🎯 KEY OPTIMIZATIONS IMPLEMENTED:")
     print("  • Vectorized lineup pool generation using multidimensional_shifting_fast")
     print("  • Smart strategy selection based on problem size")
     print("  • Clustering-based diversity sampling for large pools")

@@ -169,7 +169,8 @@ class ThemeManager:
         self._setup_fonts()
         self._apply_theme()
     
-    def _detect_system_theme(self) -> str:
+    @staticmethod
+    def _detect_system_theme() -> str:
         """Detect system theme preference"""
         try:
             # Try to detect dark mode on Windows 10/11
@@ -189,7 +190,7 @@ class ThemeManager:
                 import subprocess
                 try:
                     result = subprocess.run(['defaults', 'read', '-g', 'AppleInterfaceStyle'], 
-                                          capture_output=True, text=True)
+                                          capture_output=True, text=True, check=True)
                     return 'dark' if 'Dark' in result.stdout else 'light'
                 except:
                     pass
@@ -485,7 +486,8 @@ class ThemeManager:
         """Get a font from the current theme"""
         return self.fonts.get(font_name, self.fonts['default'])
     
-    def create_styled_widget(self, widget_class, parent, style_name: str = None, **kwargs):
+    @staticmethod
+    def create_styled_widget(widget_class, parent, style_name: str = None, **kwargs):
         """Create a widget with the specified style"""
         if style_name:
             kwargs['style'] = style_name

@@ -69,7 +69,7 @@ class OptimizeMultiObjective(OptimizeBase):
         mutate_sets = MutateMultilineupSetsOptimized()
         
         # Create initial population of lineup sets
-        logging.info(f'Creating initial population for multi-objective optimization')
+        logging.info('Creating initial population for multi-objective optimization')
         logging.info(f'Target: {target_lineups} lineups, Top-K: {top_k}, Weights: {mo_weights}')
         
         initial_population_sets = populate_sets.populate(
@@ -259,7 +259,7 @@ class OptimizeMultiObjective(OptimizeBase):
             results['profiling'] = ga.profiler.export_to_dict()
         
         # Log final results
-        logging.info(f'Multi-objective optimization complete!')
+        logging.info('Multi-objective optimization complete!')
         logging.info(f'Generated {len(best_lineups)} lineups')
         logging.info(f'Best individual lineup: {best_individual_score:.1f} points')
         logging.info(f'Top-{top_k} total: {final_metrics["top_k_scores"][0]:.1f} points')
@@ -268,8 +268,8 @@ class OptimizeMultiObjective(OptimizeBase):
         
         return results
 
-    def _validate_lineup_sets(self, 
-                            population_sets: np.ndarray, 
+    @staticmethod
+    def _validate_lineup_sets(population_sets: np.ndarray, 
                             salaries: np.ndarray, 
                             salary_cap: int) -> np.ndarray:
         """Validate all lineups in all sets for salary constraints"""
@@ -298,8 +298,8 @@ class OptimizeMultiObjective(OptimizeBase):
         
         return valid_sets_array
 
-    def _calculate_final_diversity_metrics(self, 
-                                         lineup_set: np.ndarray, 
+    @staticmethod
+    def _calculate_final_diversity_metrics(lineup_set: np.ndarray, 
                                          diversity_method: str) -> Dict[str, Any]:
         """Calculate final diversity metrics for the best set"""
         n_lineups = len(lineup_set)

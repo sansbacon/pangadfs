@@ -10,7 +10,6 @@ import numpy as np
 
 from pangadfs.base import OptimizeBase
 from pangadfs.ga import GeneticAlgorithm
-from pangadfs.optimize_pool_based import OptimizePoolBasedSets
 
 
 class OptimizeDefault(OptimizeBase):
@@ -817,8 +816,8 @@ class OptimizeMultilineupSets(OptimizeBase):
         
         return results
 
-    def _validate_lineup_sets(self, 
-                            population_sets: np.ndarray, 
+    @staticmethod
+    def _validate_lineup_sets(population_sets: np.ndarray, 
                             salaries: np.ndarray, 
                             salary_cap: int) -> np.ndarray:
         """

@@ -8,7 +8,6 @@ from typing import Dict, Any
 import numpy as np
 import pandas as pd
 from pangadfs.base import PopulateBase
-from pangadfs.misc import multidimensional_shifting
 
 
 class PopulateMultilineupSets(PopulateBase):
@@ -65,7 +64,8 @@ class PopulateMultilineupSets(PopulateBase):
         logging.info(f'Successfully generated {population_size} diverse lineup sets')
         return population_sets
     
-    def _calculate_position_indices(self, posmap: Dict[str, int]) -> Dict[str, tuple]:
+    @staticmethod
+    def _calculate_position_indices(posmap: Dict[str, int]) -> Dict[str, tuple]:
         """Calculate start and end indices for each position in the lineup array"""
         pos_indices = {}
         current_idx = 0
@@ -124,8 +124,8 @@ class PopulateMultilineupSets(PopulateBase):
         
         return lineup_set
     
-    def _generate_single_lineup(self, 
-                              pospool: Dict[str, pd.DataFrame],
+    @staticmethod
+    def _generate_single_lineup(pospool: Dict[str, pd.DataFrame],
                               pos_indices: Dict[str, tuple],
                               probcol: str) -> np.ndarray:
         """Generate a single lineup using the existing populate logic"""
@@ -178,8 +178,8 @@ class PopulateMultilineupSets(PopulateBase):
         
         return lineup
     
-    def _calculate_min_diversity_to_set(self, 
-                                      candidate: np.ndarray, 
+    @staticmethod
+    def _calculate_min_diversity_to_set(candidate: np.ndarray, 
                                       existing_lineups: np.ndarray) -> float:
         """Calculate minimum Jaccard diversity between candidate and existing lineups"""
         if len(existing_lineups) == 0:
@@ -321,7 +321,8 @@ class PopulateMultilineupSets(PopulateBase):
         
         return similarity_matrix
     
-    def _compute_similarity_matrix_sampled(self, lineup_pool: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _compute_similarity_matrix_sampled(lineup_pool: np.ndarray) -> np.ndarray:
         """
         For very large pools, use a sampled approach to estimate similarities
         
@@ -407,8 +408,8 @@ class PopulateMultilineupSets(PopulateBase):
         
         return selected_indices
     
-    def _sample_diverse_set_greedy(self, 
-                                 pool_size: int,
+    @staticmethod
+    def _sample_diverse_set_greedy(pool_size: int,
                                  target_lineups: int,
                                  selected_indices: list,
                                  available_indices: list) -> list:
@@ -442,7 +443,8 @@ class PopulateMultilineupSets(PopulateBase):
         
         return selected_indices
     
-    def _jaccard_similarity(self, lineup1: np.ndarray, lineup2: np.ndarray) -> float:
+    @staticmethod
+    def _jaccard_similarity(lineup1: np.ndarray, lineup2: np.ndarray) -> float:
         """Calculate Jaccard similarity between two lineups"""
         set1 = set(lineup1)
         set2 = set(lineup2)

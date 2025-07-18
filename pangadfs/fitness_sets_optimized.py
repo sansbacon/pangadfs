@@ -3,7 +3,6 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the MIT License
 
-import logging
 from typing import Dict, Any
 import numpy as np
 from pangadfs.base import FitnessBase
@@ -53,8 +52,8 @@ class FitnessMultilineupSetsOptimized(FitnessBase):
         
         return fitness_scores
     
-    def _calculate_total_points_vectorized(self, 
-                                         population_sets: np.ndarray, 
+    @staticmethod
+    def _calculate_total_points_vectorized(population_sets: np.ndarray, 
                                          points: np.ndarray) -> np.ndarray:
         """Vectorized calculation of total points for all sets"""
         # Use advanced indexing to get points for all lineups at once
@@ -85,8 +84,8 @@ class FitnessMultilineupSetsOptimized(FitnessBase):
         
         return penalties
     
-    def _calculate_set_diversity_penalty_fast(self, 
-                                            lineup_set: np.ndarray, 
+    @staticmethod
+    def _calculate_set_diversity_penalty_fast(lineup_set: np.ndarray, 
                                             diversity_method: str) -> float:
         """Fast diversity penalty calculation for a single set"""
         n_lineups = len(lineup_set)
@@ -121,7 +120,8 @@ class FitnessMultilineupSetsOptimized(FitnessBase):
         penalty_scale = 50.0  # Reduced from 1000.0 for quality-first optimization
         return avg_similarity * penalty_scale
     
-    def _calculate_jaccard_penalties_numba(self, population_sets: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _calculate_jaccard_penalties_numba(population_sets: np.ndarray) -> np.ndarray:
         """Numba-optimized Jaccard penalty calculation"""
         if not NUMBA_AVAILABLE:
             return np.zeros(len(population_sets))

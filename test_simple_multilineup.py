@@ -41,7 +41,7 @@ def test_multilineup_simple():
         scores = results.get('scores', [])
         diversity_metrics = results.get('diversity_metrics', {})
         
-        print(f"\n=== RESULTS ===")
+        print("\n=== RESULTS ===")
         print(f"Requested lineups: {settings['target_lineups']}")
         print(f"Generated lineups: {len(lineups)}")
         print(f"Success rate: {len(lineups) / settings['target_lineups'] * 100:.1f}%")
@@ -52,7 +52,7 @@ def test_multilineup_simple():
             print(f"Average overlap: {diversity_metrics.get('avg_overlap', 0):.3f}")
             
             # Check if lineups contain TE
-            print(f"\n=== LINEUP ANALYSIS ===")
+            print("\n=== LINEUP ANALYSIS ===")
             for i, lineup in enumerate(lineups[:3]):  # Check first 3 lineups
                 print(f"\nLineup {i+1} (Score: {scores[i]:.2f}):")
                 positions = lineup['pos'].value_counts()
@@ -63,7 +63,7 @@ def test_multilineup_simple():
                 if len(te_players) > 0:
                     print(f"  TE players: {te_players['player'].tolist()}")
                 else:
-                    print(f"  TE players: NONE FOUND!")
+                    print("  TE players: NONE FOUND!")
                     
                 # Show all players in lineup
                 print(f"  All players: {lineup['player'].tolist()}")

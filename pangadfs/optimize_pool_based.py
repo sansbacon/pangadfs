@@ -351,8 +351,8 @@ class OptimizePoolBasedSets(OptimizeBase):
         
         return injected_population
     
-    def _adapt_elite_ratio(self, 
-                         current_ratio: float,
+    @staticmethod
+    def _adapt_elite_ratio(current_ratio: float,
                          current_fitness: float,
                          performance_history: List[float],
                          step_size: float,
@@ -400,8 +400,8 @@ class OptimizePoolBasedSets(OptimizeBase):
         
         return new_ratio
     
-    def _validate_population_sets(self, 
-                                population_sets: np.ndarray,
+    @staticmethod
+    def _validate_population_sets(population_sets: np.ndarray,
                                 salaries: np.ndarray,
                                 salary_cap: int) -> np.ndarray:
         """
@@ -534,7 +534,7 @@ class OptimizePoolBasedSets(OptimizeBase):
         unique_fitness = np.array([points[lineup].sum() for lineup in unique_lineups])
         
         # Find top performers from current population that aren't already in elite pool
-        elite_set = set(tuple(lineup) for lineup in self.elite_pool)
+        elite_set = {tuple(lineup) for lineup in self.elite_pool}
         new_candidates = []
         new_candidate_fitness = []
         
@@ -608,9 +608,6 @@ class OptimizePoolBasedSets(OptimizeBase):
         """
         if n_fresh <= 0 or self.elite_pool is None:
             return
-        
-        # Import the populate class to generate fresh lineups
-        from pangadfs.populate_pool_based import PopulatePoolBasedSets
         populate_fresh = PopulatePoolBasedSets()
         
         # Generate fresh lineups

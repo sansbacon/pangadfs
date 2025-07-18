@@ -7,7 +7,6 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
 import queue
-import json
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -16,7 +15,7 @@ from .execution_panel import ExecutionPanel
 from .results_panel import ResultsPanel
 from .export_panel import ExportPanel
 from .utils.config_manager import ConfigManager
-from .theme_manager import ThemeManager, create_primary_button, create_success_button, create_danger_button
+from .theme_manager import ThemeManager
 
 
 class MainWindow:
@@ -404,7 +403,8 @@ class MainWindow:
         # Update execution panel
         self.execution_panel.set_running(running)
     
-    def _prepare_ga_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    @staticmethod
+    def _prepare_ga_config(config: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare configuration for GA with proper parameter mapping"""
         ga_settings = config.get('ga_settings', {})
         site_settings = config.get('site_settings', {})
@@ -440,7 +440,8 @@ class MainWindow:
         """Update status bar message"""
         self.status_label.config(text=message)
     
-    def _show_about(self):
+    @staticmethod
+    def _show_about():
         """Show about dialog"""
         about_text = """PangaDFS GUI v0.1.0
 
@@ -450,7 +451,8 @@ Built on the pangadfs framework by Eric Truett
 Licensed under the MIT License"""
         messagebox.showinfo("About PangaDFS", about_text)
     
-    def _show_documentation(self):
+    @staticmethod
+    def _show_documentation():
         """Show documentation"""
         messagebox.showinfo("Documentation", "Documentation is available in the docs/ folder and MULTILINEUP_README.md")
     

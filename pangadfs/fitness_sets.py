@@ -3,7 +3,6 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the MIT License
 
-import logging
 from typing import Dict, Any
 import numpy as np
 from pangadfs.base import FitnessBase
@@ -49,7 +48,8 @@ class FitnessMultilineupSets(FitnessBase):
         
         return fitness_scores
     
-    def _calculate_total_points(self, lineup_set: np.ndarray, points: np.ndarray) -> float:
+    @staticmethod
+    def _calculate_total_points(lineup_set: np.ndarray, points: np.ndarray) -> float:
         """Calculate total points for all lineups in a set"""
         total_points = 0.0
         

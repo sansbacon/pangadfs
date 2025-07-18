@@ -116,7 +116,8 @@ class ConfigManager:
         
         return filename
     
-    def validate_config(self, config: Dict[str, Any]) -> List[str]:
+    @staticmethod
+    def validate_config(config: Dict[str, Any]) -> List[str]:
         """Validate configuration and return list of errors"""
         errors = []
         

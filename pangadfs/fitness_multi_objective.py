@@ -73,8 +73,8 @@ class FitnessMultiObjective(FitnessBase):
         
         return combined_fitness
     
-    def _calculate_top_k_objective(self, 
-                                  population_sets: np.ndarray, 
+    @staticmethod
+    def _calculate_top_k_objective(population_sets: np.ndarray, 
                                   points: np.ndarray, 
                                   top_k: int) -> np.ndarray:
         """Calculate sum of points for top K lineups in each set"""
@@ -93,8 +93,8 @@ class FitnessMultiObjective(FitnessBase):
         
         return top_k_scores
     
-    def _calculate_total_objective(self, 
-                                  population_sets: np.ndarray, 
+    @staticmethod
+    def _calculate_total_objective(population_sets: np.ndarray, 
                                   points: np.ndarray) -> np.ndarray:
         """Calculate sum of points for all lineups in each set"""
         # Vectorized calculation for efficiency
@@ -117,8 +117,8 @@ class FitnessMultiObjective(FitnessBase):
         
         return diversity_scores
     
-    def _calculate_set_diversity_score(self, 
-                                     lineup_set: np.ndarray, 
+    @staticmethod
+    def _calculate_set_diversity_score(lineup_set: np.ndarray, 
                                      diversity_method: str) -> float:
         """Calculate diversity score for a single set (higher = more diverse)"""
         n_lineups = len(lineup_set)
@@ -154,7 +154,8 @@ class FitnessMultiObjective(FitnessBase):
         avg_dissimilarity = total_dissimilarity / n_pairs if n_pairs > 0 else 0.0
         return avg_dissimilarity
     
-    def _normalize_scores(self, scores: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _normalize_scores(scores: np.ndarray) -> np.ndarray:
         """Normalize scores to 0-1 range"""
         if len(scores) == 0:
             return scores
@@ -199,7 +200,8 @@ class FitnessMultiObjectiveOptimized(FitnessMultiObjective):
         else:
             return super()._calculate_diversity_objective(population_sets, diversity_method)
     
-    def _calculate_diversity_numba(self, population_sets: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _calculate_diversity_numba(population_sets: np.ndarray) -> np.ndarray:
         """Numba-optimized diversity calculation"""
         return _diversity_scores_numba_impl(population_sets)
 

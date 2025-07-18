@@ -3,7 +3,6 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the MIT License
 
-import logging
 from typing import Dict, Any
 import numpy as np
 from pangadfs.base import CrossoverBase
@@ -63,7 +62,8 @@ class CrossoverMultilineupSetsOptimized(CrossoverBase):
         
         return new_population
     
-    def _tournament_selection(self, fitness_scores: np.ndarray, tournament_size: int) -> int:
+    @staticmethod
+    def _tournament_selection(fitness_scores: np.ndarray, tournament_size: int) -> int:
         """Select parent using tournament selection"""
         tournament_indices = np.random.choice(len(fitness_scores), tournament_size, replace=False)
         tournament_fitness = fitness_scores[tournament_indices]
@@ -91,7 +91,8 @@ class CrossoverMultilineupSetsOptimized(CrossoverBase):
         else:
             return self._hybrid_crossover(parent1_set, parent2_set)
     
-    def _lineup_level_crossover(self, parent1_set: np.ndarray, parent2_set: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _lineup_level_crossover(parent1_set: np.ndarray, parent2_set: np.ndarray) -> np.ndarray:
         """Crossover by swapping entire lineups between sets"""
         target_lineups, lineup_size = parent1_set.shape
         child_set = parent1_set.copy()
@@ -105,7 +106,8 @@ class CrossoverMultilineupSetsOptimized(CrossoverBase):
         
         return child_set
     
-    def _player_level_crossover(self, parent1_set: np.ndarray, parent2_set: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _player_level_crossover(parent1_set: np.ndarray, parent2_set: np.ndarray) -> np.ndarray:
         """Crossover by swapping players within corresponding lineups"""
         target_lineups, lineup_size = parent1_set.shape
         child_set = parent1_set.copy()

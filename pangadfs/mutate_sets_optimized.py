@@ -3,7 +3,6 @@
 # Copyright (C) 2020 Eric Truett
 # Licensed under the MIT License
 
-import logging
 from typing import Dict, Any
 import numpy as np
 from pangadfs.base import MutateBase
@@ -53,7 +52,8 @@ class MutateMultilineupSetsOptimized(MutateBase):
         
         return mutated_population
     
-    def _prepare_position_arrays(self, pospool: Dict, posmap: Dict) -> Dict:
+    @staticmethod
+    def _prepare_position_arrays(pospool: Dict, posmap: Dict) -> Dict:
         """Convert pospool to numpy arrays for faster access"""
         pos_arrays = {}
         
@@ -90,7 +90,8 @@ class MutateMultilineupSetsOptimized(MutateBase):
         
         return mutated_set
     
-    def _player_swap_mutation(self, lineup_set: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _player_swap_mutation(lineup_set: np.ndarray) -> np.ndarray:
         """Swap players between lineups in the set"""
         target_lineups, lineup_size = lineup_set.shape
         
@@ -112,7 +113,8 @@ class MutateMultilineupSetsOptimized(MutateBase):
         
         return lineup_set
     
-    def _lineup_shuffle_mutation(self, lineup_set: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _lineup_shuffle_mutation(lineup_set: np.ndarray) -> np.ndarray:
         """Shuffle players within individual lineups"""
         target_lineups, lineup_size = lineup_set.shape
         
@@ -176,7 +178,8 @@ class MutateMultilineupSetsOptimized(MutateBase):
         
         return lineup_set
     
-    def _get_position_type_for_slot(self, slot_idx: int, posmap: Dict) -> str:
+    @staticmethod
+    def _get_position_type_for_slot(slot_idx: int, posmap: Dict) -> str:
         """Determine position type for a given slot index"""
         if posmap is None:
             return 'FLEX'  # Default fallback

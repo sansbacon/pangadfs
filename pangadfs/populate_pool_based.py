@@ -86,7 +86,7 @@ class PopulatePoolBasedSets(PopulateBase):
         
         # Step 2: Evaluate fitness and create elite/general pools
         if points is not None:
-            logging.info(f'Step 2: Evaluating fitness and creating stratified pools...')
+            logging.info('Step 2: Evaluating fitness and creating stratified pools...')
             elite_pool, general_pool, elite_fitness, general_fitness = self._create_stratified_pools(
                 lineup_pool, points, elite_pool_size, memory_optimize
             )
@@ -99,7 +99,7 @@ class PopulatePoolBasedSets(PopulateBase):
             general_fitness = np.random.random(len(general_pool))
         
         # Step 3: Remove duplicates and validate pools
-        logging.info(f'Step 3: Removing duplicates and validating pools...')
+        logging.info('Step 3: Removing duplicates and validating pools...')
         elite_pool, elite_fitness = self._deduplicate_and_validate_pool(
             elite_pool, elite_fitness, salaries, salary_cap, "elite"
         )
@@ -121,7 +121,8 @@ class PopulatePoolBasedSets(PopulateBase):
         logging.info(f'Pool-based generation complete: {len(elite_pool)} elite + {len(general_pool)} general lineups')
         return population_sets
     
-    def _prepare_position_data(self, pospool: Dict[str, pd.DataFrame], 
+    @staticmethod
+    def _prepare_position_data(pospool: Dict[str, pd.DataFrame], 
                              posmap: Dict[str, int], probcol: str) -> Dict[str, Any]:
         """Prepare position data for vectorized operations"""
         pos_data = {}
@@ -159,7 +160,8 @@ class PopulatePoolBasedSets(PopulateBase):
         
         return pos_data
     
-    def _generate_initial_pool(self, pos_data: Dict[str, Any], 
+    @staticmethod
+    def _generate_initial_pool(pos_data: Dict[str, Any], 
                              pool_size: int, lineup_size: int,
                              memory_optimize: bool) -> np.ndarray:
         """Generate initial pool of lineups using vectorized operations"""
@@ -198,7 +200,8 @@ class PopulatePoolBasedSets(PopulateBase):
         
         return lineup_pool
     
-    def _create_stratified_pools(self, lineup_pool: np.ndarray, points: np.ndarray,
+    @staticmethod
+    def _create_stratified_pools(lineup_pool: np.ndarray, points: np.ndarray,
                                elite_pool_size: int, memory_optimize: bool) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Create elite and general pools based on fitness ranking"""
         
@@ -254,7 +257,8 @@ class PopulatePoolBasedSets(PopulateBase):
         
         return valid_pool, valid_fitness
     
-    def _deduplicate_pool(self, pool: np.ndarray, fitness: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    @staticmethod
+    def _deduplicate_pool(pool: np.ndarray, fitness: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Remove duplicate lineups from pool"""
         
         # Convert to tuples for hashing
@@ -393,7 +397,8 @@ class PopulatePoolBasedSets(PopulateBase):
         
         return selected
     
-    def _calculate_min_diversity_to_lineups(self, candidate: np.ndarray, existing_lineups: list) -> float:
+    @staticmethod
+    def _calculate_min_diversity_to_lineups(candidate: np.ndarray, existing_lineups: list) -> float:
         """Calculate minimum diversity between candidate and existing lineups"""
         if not existing_lineups:
             return 1.0
@@ -431,8 +436,8 @@ if NUMBA_AVAILABLE:
     def _calculate_fitness_numba(lineup_pool, points):
         """Numba-optimized fitness calculation"""
         fitness_scores = np.zeros(len(lineup_pool))
-        for i in range(len(lineup_pool)):
-            fitness_scores[i] = points[lineup_pool[i]].sum()
+        for i, item in enumerate(lineup_pool):
+            fitness_scores[i] = points[item].sum()
         return fitness_scores
     
     # Replace method if numba is available

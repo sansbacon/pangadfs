@@ -89,7 +89,7 @@ def test_fitness_optimization():
     end_time = time.time()
     elapsed = end_time - start_time
     
-    print(f"✅ Fitness evaluation completed!")
+    print("✅ Fitness evaluation completed!")
     print(f"⏱️  Time: {elapsed:.4f} seconds")
     print(f"📊 Fitness scores shape: {fitness_scores.shape}")
     print(f"📈 Fitness range: {np.min(fitness_scores):.2f} to {np.max(fitness_scores):.2f}")
@@ -131,9 +131,9 @@ def test_crossover_optimization(population_sets, fitness_scores):
         # Validate diversity
         sample_set = new_population[0]
         diversities = []
-        for i in range(len(sample_set)):
+        for i, item in enumerate(sample_set):
             for j in range(i + 1, len(sample_set)):
-                set1, set2 = set(sample_set[i]), set(sample_set[j])
+                set1, set2 = set(item), set(sample_set[j])
                 jaccard = len(set1 & set2) / len(set1 | set2)
                 diversities.append(1 - jaccard)
         
@@ -255,7 +255,7 @@ def test_full_generation_cycle():
     avg_gen_time = np.mean(generation_times)
     total_time = np.sum(generation_times)
     
-    print(f"\n📈 GENERATION CYCLE SUMMARY")
+    print("\n📈 GENERATION CYCLE SUMMARY")
     print(f"⏱️  Average generation time: {avg_gen_time:.3f} seconds")
     print(f"⏱️  Total time for {n_generations} generations: {total_time:.3f} seconds")
     print(f"🚀 Generations per minute: {60 / avg_gen_time:.1f}")
@@ -325,7 +325,7 @@ def benchmark_against_baseline():
     # Report results
     total_ops = config['population_size'] * config['target_lineups']
     
-    print(f"\n📊 BENCHMARK RESULTS:")
+    print("\n📊 BENCHMARK RESULTS:")
     print(f"🎯 Fitness evaluation: {avg_fitness_time:.4f}s ({total_ops/avg_fitness_time:.0f} ops/sec)")
     print(f"🔄 Crossover operation: {avg_crossover_time:.4f}s ({total_ops/avg_crossover_time:.0f} ops/sec)")
     print(f"🧬 Mutation operation: {avg_mutation_time:.4f}s ({total_ops/avg_mutation_time:.0f} ops/sec)")

@@ -50,7 +50,8 @@ class PositionValidate(ValidateBase):
         
         return np.array(valid_lineups)
     
-    def _is_lineup_valid(self, lineup: np.ndarray, player_positions: Dict[int, str], 
+    @staticmethod
+    def _is_lineup_valid(lineup: np.ndarray, player_positions: Dict[int, str], 
                         posmap: Dict[str, int], flex_positions: tuple) -> bool:
         """Check if a single lineup meets position requirements"""
         
@@ -119,7 +120,8 @@ class PositionValidateOptimized(ValidateBase):
         
         return population[valid_mask]
     
-    def _is_lineup_valid_vectorized(self, lineup: np.ndarray, position_array: np.ndarray,
+    @staticmethod
+    def _is_lineup_valid_vectorized(lineup: np.ndarray, position_array: np.ndarray,
                                   posmap: Dict[str, int], flex_positions: tuple) -> bool:
         """Vectorized validation for a single lineup"""
         

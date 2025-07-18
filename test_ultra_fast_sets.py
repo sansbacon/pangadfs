@@ -109,7 +109,7 @@ def test_ultra_fast_performance():
             expected_shape = (config['population_size'], config['target_lineups'], sum(posmap.values()))
             actual_shape = population_sets.shape
             
-            print(f"✅ SUCCESS!")
+            print("✅ SUCCESS!")
             print(f"⏱️  Time: {elapsed:.2f} seconds")
             print(f"📊 Shape: {actual_shape} (expected: {expected_shape})")
             print(f"🎯 Time per set: {elapsed / config['population_size']:.3f} seconds")
@@ -118,9 +118,9 @@ def test_ultra_fast_performance():
             # Quick diversity check
             sample_set = population_sets[0]
             diversities = []
-            for i in range(len(sample_set)):
+            for i, item in enumerate(sample_set):
                 for j in range(i + 1, len(sample_set)):
-                    lineup1_set = set(sample_set[i])
+                    lineup1_set = set(item)
                     lineup2_set = set(sample_set[j])
                     jaccard = len(lineup1_set & lineup2_set) / len(lineup1_set | lineup2_set)
                     diversities.append(1 - jaccard)
@@ -154,7 +154,7 @@ def test_algorithm_comparison():
         'lineup_pool_size': 10000
     }
     
-    print(f"Testing configuration that was slow:")
+    print("Testing configuration that was slow:")
     print(f"- Population size: {config['population_size']}")
     print(f"- Target lineups: {config['target_lineups']}")
     print(f"- Pool size: {config['lineup_pool_size']}")
@@ -173,16 +173,16 @@ def test_algorithm_comparison():
     end_time = time.time()
     elapsed = end_time - start_time
     
-    print(f"\n✅ Ultra-fast algorithm completed!")
+    print("\n✅ Ultra-fast algorithm completed!")
     print(f"⏱️  Total time: {elapsed:.2f} seconds")
     print(f"🎯 Time per set: {elapsed / config['population_size']:.3f} seconds")
-    print(f"🚀 Expected speedup: 50-100x faster than original")
+    print("🚀 Expected speedup: 50-100x faster than original")
     
     # Validate the results
-    print(f"\n📊 Results validation:")
+    print("\n📊 Results validation:")
     print(f"- Shape: {population_sets.shape}")
     print(f"- Non-zero elements: {np.count_nonzero(population_sets)}")
-    print(f"- Unique lineups in first set: {len(set(tuple(lineup) for lineup in population_sets[0]))}")
+    print(f"- Unique lineups in first set: {len({tuple(lineup) for lineup in population_sets[0]})}")
 
 if __name__ == "__main__":
     test_ultra_fast_performance()

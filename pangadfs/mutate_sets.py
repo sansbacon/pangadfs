@@ -8,7 +8,6 @@ from typing import Dict, Any
 import numpy as np
 import pandas as pd
 from pangadfs.base import MutateBase
-from pangadfs.misc import multidimensional_shifting
 
 
 class MutateMultilineupSets(MutateBase):
@@ -149,8 +148,8 @@ class MutateMultilineupSets(MutateBase):
         
         return best_lineup
     
-    def _generate_single_lineup(self, 
-                              pospool: Dict[str, pd.DataFrame],
+    @staticmethod
+    def _generate_single_lineup(pospool: Dict[str, pd.DataFrame],
                               pos_indices: Dict[str, tuple],
                               probcol: str) -> np.ndarray:
         """Generate a single lineup using the existing populate logic"""
@@ -203,7 +202,8 @@ class MutateMultilineupSets(MutateBase):
         
         return lineup
     
-    def _calculate_position_indices(self, posmap: Dict[str, int]) -> Dict[str, tuple]:
+    @staticmethod
+    def _calculate_position_indices(posmap: Dict[str, int]) -> Dict[str, tuple]:
         """Calculate start and end indices for each position in the lineup array"""
         pos_indices = {}
         current_idx = 0
@@ -216,8 +216,8 @@ class MutateMultilineupSets(MutateBase):
             
         return pos_indices
     
-    def _calculate_min_diversity_to_set(self, 
-                                      candidate: np.ndarray, 
+    @staticmethod
+    def _calculate_min_diversity_to_set(candidate: np.ndarray, 
                                       existing_lineups: np.ndarray) -> float:
         """Calculate minimum Jaccard diversity between candidate and existing lineups"""
         if len(existing_lineups) == 0:

@@ -93,7 +93,7 @@ def test_pool_based_optimizer(config, test_name):
     print(f"\n{'='*80}")
     print(f"Testing {test_name}")
     print(f"{'='*80}")
-    print(f"Configuration:")
+    print("Configuration:")
     print(f"  - Population size: {config['ga_settings']['population_size']}")
     print(f"  - Target lineups: {config['ga_settings']['target_lineups']}")
     print(f"  - Initial pool size: {config['ga_settings']['initial_pool_size']}")
@@ -131,14 +131,14 @@ def test_pool_based_optimizer(config, test_name):
                 avg_overlap = results['diversity_metrics'].get('avg_overlap', 0.0)
                 avg_diversity = 1.0 - avg_overlap
             
-            print(f"\n✅ SUCCESS!")
+            print("\n✅ SUCCESS!")
             print(f"⏱️  Total time: {elapsed_time:.2f} seconds")
-            print(f"📊 Results:")
+            print("📊 Results:")
             print(f"  - Generated {n_lineups} lineups")
             print(f"  - Best individual score: {best_score}")
             print(f"  - Average diversity: {avg_diversity:.3f}")
             print(f"  - Time per lineup: {elapsed_time/n_lineups:.3f} seconds")
-            print(f"🎯 Pool-Based Metrics:")
+            print("🎯 Pool-Based Metrics:")
             print(f"  - Final elite ratio: {final_elite_ratio}")
             print(f"  - Elite pool size: {pool_stats.get('elite_pool_size', 'N/A')}")
             print(f"  - General pool size: {pool_stats.get('general_pool_size', 'N/A')}")
@@ -146,7 +146,7 @@ def test_pool_based_optimizer(config, test_name):
             # Show individual lineup scores
             if 'scores' in results:
                 scores = results['scores']
-                print(f"📈 Individual Lineup Scores:")
+                print("📈 Individual Lineup Scores:")
                 for i, score in enumerate(scores[:5]):  # Show first 5
                     print(f"  - Lineup {i+1}: {score:.1f}")
                 if len(scores) > 5:
@@ -162,7 +162,7 @@ def test_pool_based_optimizer(config, test_name):
                 'pool_stats': pool_stats
             }
         else:
-            print(f"❌ No lineups generated")
+            print("❌ No lineups generated")
             return {'success': False, 'time': elapsed_time}
             
     except Exception as e:
@@ -246,7 +246,7 @@ def compare_optimizers():
         else:
             print(f"  ❌ Pool-Based: FAILED ({pool.get('time', 0):.2f}s)")
     
-    print(f"\n🎯 POOL-BASED ALGORITHM FEATURES:")
+    print("\n🎯 POOL-BASED ALGORITHM FEATURES:")
     print("  • Pre-computed lineup pools (100K total, 10K elite)")
     print("  • Fitness-based stratification for quality assurance")
     print("  • Adaptive elite/general sampling ratios")
@@ -279,10 +279,10 @@ def demonstrate_adaptive_features():
     result = test_pool_based_optimizer(config, "Adaptive Features Demo")
     
     if result['success']:
-        print(f"\n🎉 Adaptive features working successfully!")
+        print("\n🎉 Adaptive features working successfully!")
         print(f"   Elite ratio adapted to: {result.get('final_elite_ratio', 'N/A')}")
     else:
-        print(f"\n⚠️  Adaptive features test encountered issues")
+        print("\n⚠️  Adaptive features test encountered issues")
 
 if __name__ == '__main__':
     print("🧬 POOL-BASED MULTILINEUP OPTIMIZER TEST SUITE")

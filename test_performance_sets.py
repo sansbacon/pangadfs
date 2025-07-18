@@ -77,7 +77,7 @@ def test_performance():
                 invoke_on_load=True)
     
     print("Testing improved set-based multilineup optimization performance...")
-    print(f"Configuration:")
+    print("Configuration:")
     print(f"  - Population size: {config['ga_settings']['population_size']}")
     print(f"  - Generations: {config['ga_settings']['n_generations']}")
     print(f"  - Target lineups: {config['ga_settings']['target_lineups']}")
@@ -94,14 +94,14 @@ def test_performance():
         end_time = time.time()
         elapsed_time = end_time - start_time
         
-        print(f"✅ Optimization completed successfully!")
+        print("✅ Optimization completed successfully!")
         print(f"⏱️  Total time: {elapsed_time:.2f} seconds")
         print()
         
         # Analyze results
         if 'lineups' in results and results['lineups']:
             lineups = results['lineups']
-            print(f"📊 Results Analysis:")
+            print("📊 Results Analysis:")
             print(f"  - Generated {len(lineups)} lineups")
             print(f"  - Best score: {results.get('best_score', 'N/A')}")
             
@@ -112,9 +112,9 @@ def test_performance():
                 total_overlap = 0
                 comparisons = 0
                 
-                for i in range(len(lineups)):
+                for i, item in enumerate(lineups):
                     for j in range(i + 1, len(lineups)):
-                        diversity = calculate_jaccard_diversity(lineups[i], lineups[j])
+                        diversity = calculate_jaccard_diversity(item, lineups[j])
                         overlap = 1.0 - diversity
                         total_overlap += overlap
                         comparisons += 1

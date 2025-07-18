@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 
 # Load the sample data to see the structure
 pool = pd.read_csv('pangadfs/app/appdata/pool.csv')

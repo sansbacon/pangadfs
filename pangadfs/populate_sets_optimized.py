@@ -64,13 +64,14 @@ class PopulateMultilineupSetsOptimized(PopulateBase):
             )
         else:
             # Large: Use direct diverse generation without full pool
-            logging.info(f'Using DIRECT DIVERSE strategy (avoiding large pool)')
+            logging.info('Using DIRECT DIVERSE strategy (avoiding large pool)')
             return self._generate_sets_direct_diverse(
                 pos_data, population_size, target_lineups, lineup_size, 
                 diversity_threshold, max_attempts
             )
     
-    def _prepare_position_data(self, pospool: Dict[str, pd.DataFrame], 
+    @staticmethod
+    def _prepare_position_data(pospool: Dict[str, pd.DataFrame], 
                              posmap: Dict[str, int], probcol: str) -> Dict[str, Any]:
         """Prepare position data for vectorized operations"""
         pos_data = {}
@@ -148,7 +149,8 @@ class PopulateMultilineupSetsOptimized(PopulateBase):
         
         return population_sets
     
-    def _generate_lineup_pool_vectorized(self, pos_data: Dict[str, Any], 
+    @staticmethod
+    def _generate_lineup_pool_vectorized(pos_data: Dict[str, Any], 
                                        pool_size: int, lineup_size: int) -> np.ndarray:
         """Generate lineup pool using vectorized operations"""
         lineup_pool = np.zeros((pool_size, lineup_size), dtype=int)
@@ -296,7 +298,8 @@ class PopulateMultilineupSetsOptimized(PopulateBase):
         
         return population_sets
     
-    def _create_lineup_clusters(self, lineup_pool: np.ndarray, n_clusters: int) -> list:
+    @staticmethod
+    def _create_lineup_clusters(lineup_pool: np.ndarray, n_clusters: int) -> list:
         """Create simple hash-based clusters for lineup diversity"""
         pool_size = len(lineup_pool)
         clusters = [[] for _ in range(n_clusters)]
@@ -347,7 +350,8 @@ class PopulateMultilineupSetsOptimized(PopulateBase):
         
         return lineup_set
     
-    def _generate_single_lineup_fast(self, pos_data: Dict[str, Any], lineup_size: int) -> np.ndarray:
+    @staticmethod
+    def _generate_single_lineup_fast(pos_data: Dict[str, Any], lineup_size: int) -> np.ndarray:
         """Generate a single lineup efficiently"""
         lineup = np.zeros(lineup_size, dtype=int)
         
@@ -371,7 +375,8 @@ class PopulateMultilineupSetsOptimized(PopulateBase):
         
         return lineup
     
-    def _calculate_min_diversity_fast(self, candidate: np.ndarray, 
+    @staticmethod
+    def _calculate_min_diversity_fast(candidate: np.ndarray, 
                                     existing_lineups: np.ndarray) -> float:
         """Fast diversity calculation"""
         if len(existing_lineups) == 0:
@@ -430,7 +435,8 @@ class PopulateMultilineupSetsOptimized(PopulateBase):
         
         return population_sets
     
-    def _create_lineup_fingerprints(self, lineup_pool: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _create_lineup_fingerprints(lineup_pool: np.ndarray) -> np.ndarray:
         """Create compact fingerprints for fast similarity estimation"""
         pool_size, lineup_size = lineup_pool.shape
         
@@ -456,7 +462,8 @@ class PopulateMultilineupSetsOptimized(PopulateBase):
         
         return fingerprints
     
-    def _cluster_lineups_by_fingerprint(self, fingerprints: np.ndarray, 
+    @staticmethod
+    def _cluster_lineups_by_fingerprint(fingerprints: np.ndarray, 
                                       n_clusters: int) -> list:
         """Cluster lineups based on fingerprint similarity"""
         pool_size = len(fingerprints)
@@ -496,7 +503,8 @@ class PopulateMultilineupSetsOptimized(PopulateBase):
         
         return non_empty_clusters
     
-    def _assign_clusters_to_sets_vectorized(self, clusters: list, 
+    @staticmethod
+    def _assign_clusters_to_sets_vectorized(clusters: list, 
                                           population_size: int, 
                                           target_lineups: int) -> np.ndarray:
         """Vectorized assignment of clusters to lineup sets for diversity"""
@@ -551,9 +559,9 @@ if NUMBA_AVAILABLE:
         union_size = len(lineup1) + len(lineup2)
         
         # Count intersections
-        for i in range(len(lineup1)):
-            for j in range(len(lineup2)):
-                if lineup1[i] == lineup2[j]:
+        for i, _ in enumerate(lineup1):
+            for j, item in enumerate(lineup2):
+                if lineup1[i] == item:
                     intersection += 1
                     union_size -= 1
                     break
