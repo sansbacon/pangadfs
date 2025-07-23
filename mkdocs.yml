@@ -1,46 +1,117 @@
-# site configuration
+# Site configuration
 site_name: pangadfs
 site_url: https://sansbacon.github.io/pangadfs/
 site_description: pandas-based lineup optimization framework
 site_author: Eric Truett
 repo_url: https://github.com/sansbacon/pangadfs
+repo_name: sansbacon/pangadfs
 
+# Theme configuration
 theme:
   name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
 
+# Plugins
 plugins:
-  - search
-  - mkdocstrings
+  - search:
+      lang: en
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_toc_entry: false
+            merge_init_into_class: true
 
+# Markdown extensions
 markdown_extensions:
-- toc:
-    permalink: true
-- admonition
-- codehilite
-- extra
-- pymdownx.superfences
-- pymdownx.tabbed
+  - toc:
+      permalink: true
+      title: On this page
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - def_list
+  - footnotes
+  - tables
 
+# Navigation
 nav:
-- pangadfs: index.md
-- history-design-future.md
-- features.md
-- Developing pangadfs apps and plugins:
-    - plugin-namespaces.md
-    - default-plugins.md
-    - building-plugins.md
-    - contributing.md
-- release-notes.md
-- Code Reference:
-    - base: base-reference.md
-    - crossover: crossover-reference.md
-    - fitness: fitness-reference.md
-    - misc: misc-reference.md
-    - mutate: mutate-reference.md
-    - optimize: optimize-reference.md
-    - penalty: penalty-reference.md
-    - pool: pool-reference.md
-    - populate: populate-reference.md
-    - pospool: pospool-reference.md
-    - select: select-reference.md
-    - validate: validate-reference.md
+  - Home: index.md
+  - History & Design: history-design-future.md
+  - Features: features.md
+  - Development:
+      - Plugin Namespaces: plugin-namespaces.md
+      - Default Plugins: default-plugins.md
+      - Building Plugins: building-plugins.md
+      - Contributing: contributing.md
+  - Release Notes: release-notes.md
+  - API Reference:
+      - Base Classes: base-reference.md
+      - Crossover: crossover-reference.md
+      - Fitness: fitness-reference.md
+      - Miscellaneous: misc-reference.md
+      - Mutation: mutate-reference.md
+      - Optimization: optimize-reference.md
+      - Penalty: penalty-reference.md
+      - Pool: pool-reference.md
+      - Population: populate-reference.md
+      - Position Pool: pospool-reference.md
+      - Selection: select-reference.md
+      - Validation: validate-reference.md
+
+# Extra configuration
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/sansbacon/pangadfs
+  version:
+    provider: mike
