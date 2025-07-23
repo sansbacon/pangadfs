@@ -40,7 +40,7 @@ $ pip install pangadfs
 
 ## Example
 
-### Create It
+### Create I
 
 A simple pangadfs optimizer app could look like the following
 
