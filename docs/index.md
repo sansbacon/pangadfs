@@ -8,6 +8,13 @@ pangadfs is a pandas-based (python) genetic algorithm framework for fantasy spor
 
 **Source Code**: <a href="https://github.com/sansbacon/pangadfs" target="_blank">https://github.com/sansbacon/pangadfs</a>
 
+**GUI Application**: <a href="https://github.com/sansbacon/pangadfs-gui" target="_blank">https://github.com/sansbacon/pangadfs-gui</a>
+
+---
+
+!!! info "Version 0.2 Update"
+    Starting with version 0.2, the GUI application has been separated into its own repository for better modularity and easier maintenance. The core pangadfs library now focuses purely on the optimization algorithms.
+
 ---
 
 The key pangadfs features are:

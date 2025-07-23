@@ -15,7 +15,7 @@ long_description = (Path(__file__).parent / 'README.md').read_text()
 def run():
     setup(
         name='pangadfs',
-        version='0.1',
+        version='0.2',
         description='extensible pandas-based genetic algorithm for fantasy sports lineup optimization',
         long_description=long_description,
         long_description_content_type='text/markdown',
