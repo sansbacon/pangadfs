@@ -18,7 +18,7 @@ The key pangadfs features are:
 * **Fewer bugs**: Small core means fewer bugs and easier to trace code. Unlike other optimizers, pangadfs does not generate complicated equations behind the curtain that are difficult to comprehend and debug.
 
 
-## Requirements
+## Requirements [TODO: update reqirements]
 
 * Python 3.8+
 * pandas 1.0+
