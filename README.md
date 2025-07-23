@@ -38,6 +38,20 @@ $ pip install pangadfs
 
 </div>
 
+## GUI Application
+
+For users who prefer a graphical interface, a separate GUI application is available:
+
+**PangaDFS GUI**: <a href="https://github.com/sansbacon/pangadfs-gui" target="_blank">https://github.com/sansbacon/pangadfs-gui</a>
+
+The GUI provides an intuitive interface for lineup optimization with features like:
+- Visual configuration management
+- Real-time optimization monitoring  
+- Comprehensive results analysis
+- Multiple export formats
+
+Install with: `pip install pangadfs-gui`
+
 ## Example
 
 ### Create App
