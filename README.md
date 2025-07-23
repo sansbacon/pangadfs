@@ -10,7 +10,7 @@ pangadfs is a pandas-based (python) genetic algorithm framework for fantasy spor
 
 ---
 
-The key pangadfs features are:
+The key pangadfs features are as follows:
 
 * **Fast**: takes advantage of pandas and numpy to generate thousands of lineups quickly.
 * **Extensible**: any desired functionality can be added with a straightforward plugin architecture.
