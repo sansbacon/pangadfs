@@ -287,7 +287,7 @@ class MultilineupBenchmark:
             return {'error': 'No results to analyze'}
         
         df = pd.DataFrame(self.results['all_results'])
-        successful_df = df[df['success'] == True]
+        successful_df = df[df['success'] is True]
         
         if len(successful_df) == 0:
             return {'error': 'No successful runs to analyze'}
@@ -299,7 +299,7 @@ class MultilineupBenchmark:
         }
         
         # Calculate summary statistics by approach
-        for approach in self.approaches.keys():
+        for approach in self.approaches:
             approach_data = successful_df[successful_df['approach'] == approach]
             
             if len(approach_data) > 0:
@@ -323,7 +323,7 @@ class MultilineupBenchmark:
         }
         
         approach_scores = {}
-        for approach in self.approaches.keys():
+        for approach in self.approaches:
             if approach in analysis['summary_stats']:
                 stats = analysis['summary_stats'][approach]
                 
@@ -367,7 +367,8 @@ class MultilineupBenchmark:
         
         return analysis
     
-    def _generate_recommendation_reasoning(self, analysis: Dict, winner: str) -> str:
+    @staticmethod
+    def _generate_recommendation_reasoning(analysis: Dict, winner: str) -> str:
         """Generate reasoning for the recommendation"""
         if not winner or winner not in analysis['summary_stats']:
             return "Insufficient data for recommendation"
@@ -382,7 +383,8 @@ class MultilineupBenchmark:
         
         return reasoning
     
-    def _generate_performance_summary(self, analysis: Dict) -> str:
+    @staticmethod
+    def _generate_performance_summary(analysis: Dict) -> str:
         """Generate overall performance summary"""
         summary = "Performance Summary:\n"
         
