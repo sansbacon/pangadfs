@@ -1,9 +1,0 @@
-# GUI-specific dependencies for pangadfs-gui package
-# Install these in addition to the core pangadfs requirements
-
-# GUI framework (tkinter is built-in to Python)
-# Excel export support
-openpyxl>=3.0.0
-
-# Core pangadfs dependency (will be handled by setup.py in GUI package)
-# pangadfs>=0.1

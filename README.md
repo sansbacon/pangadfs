@@ -52,11 +52,11 @@ The GUI provides an intuitive interface for lineup optimization with features li
 
 Install with: `pip install pangadfs-gui`
 
-## Example
+## Examples
 
-### Create App
+### Single Lineup Optimization
 
-A simple pangadfs optimizer app could look like the following
+A simple pangadfs optimizer app for single lineup optimization:
 
 ```Python
 # pangadfs/app/app.py
@@ -129,6 +129,70 @@ def run():
 
 if __name__ == '__main__':
 	run()
+
+```
+
+### Multiple Lineup Optimization
+
+For generating multiple diverse lineups, use the `OptimizeMultilineup` approach:
+
+```Python
+from pangadfs.ga import GeneticAlgorithm
+from pangadfs.optimize import OptimizeMultilineup
+from pathlib import Path
+
+def run_multilineup():
+	"""Example multilineup optimizer using OptimizeMultilineup"""
+	ctx = {
+		'ga_settings': {
+			'crossover_method': 'uniform',
+			'csvpth': Path(__file__).parent / 'appdata' / 'pool.csv',
+			'elite_divisor': 5,
+			'elite_method': 'fittest',
+			'mutation_rate': .1,
+			'n_generations': 150,
+			'points_column': 'proj',
+			'population_size': 1000,
+			'position_column': 'pos',
+			'salary_column': 'salary',
+			'select_method': 'roulette',
+			'stop_criteria': 25,
+			'verbose': True,
+			# Multilineup-specific settings
+			'target_lineups': 100,
+			'diversity_weight': 0.25,
+			'min_overlap_threshold': 0.4,
+			'diversity_method': 'jaccard'
+		},
+
+		'site_settings': {
+			'flex_positions': ('RB', 'WR', 'TE'),
+			'lineup_size': 9,
+			'posfilter': {'QB': 14, 'RB': 8, 'WR': 8, 'TE': 5, 'DST': 4, 'FLEX': 8},
+			'posmap': {'DST': 1, 'QB': 1, 'TE': 1, 'RB': 2, 'WR': 3, 'FLEX': 7},
+			'salary_cap': 50000
+		}
+	}
+
+	# Use OptimizeMultilineup for multiple diverse lineups
+	optimizer = OptimizeMultilineup()
+	ga = GeneticAlgorithm(ctx=ctx, optimize=optimizer)
+	
+	# run optimizer
+	results = ga.optimize()
+
+	# show results
+	print(f'Generated {len(results["lineups"])} diverse lineups')
+	print(f'Best individual score: {results["best_score"]}')
+	print(f'Average diversity overlap: {results["diversity_metrics"]["avg_overlap"]:.3f}')
+	
+	# Display top 5 lineups
+	for i, (lineup, score) in enumerate(zip(results['lineups'][:5], results['scores'][:5])):
+		print(f'\nLineup {i+1} (Score: {score:.1f}):')
+		print(lineup[['player', 'pos', 'salary', 'proj']])
+
+if __name__ == '__main__':
+	run_multilineup()
 
 ```
 
