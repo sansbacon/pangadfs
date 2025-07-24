@@ -1,241 +1,279 @@
-# pangadfs/mutate_sets.py
+# pangadfs/mutate_sets_optimized.py
 # -*- coding: utf-8 -*-
 # Copyright (C) 2020 Eric Truett
 # Licensed under the MIT License
 
-import logging
 from typing import Dict, Any
 import numpy as np
-import pandas as pd
 from pangadfs.base import MutateBase
+
+try:
+    from numba import njit, prange
+    NUMBA_AVAILABLE = True
+except ImportError:
+    NUMBA_AVAILABLE = False
 
 
 class MutateMultilineupSets(MutateBase):
-    """Mutation operation for lineup sets"""
+    """Optimized mutation for lineup sets"""
 
     def mutate(self, 
                population_sets: np.ndarray,
                mutation_rate: float = 0.1,
-               pospool: Dict[str, pd.DataFrame] = None,
-               posmap: Dict[str, int] = None,
-               probcol: str = 'prob',
-               diversity_threshold: float = 0.3,
-               max_attempts: int = 50,
+               pospool: Dict = None,
+               posmap: Dict = None,
                **kwargs) -> np.ndarray:
         """
-        Mutate lineup sets by replacing lineups within sets
+        Mutate lineup sets with multiple strategies
         
         Args:
             population_sets: Shape (pop_size, target_lineups, lineup_size)
-            mutation_rate: Probability of mutating each set
-            pospool: Dictionary of position DataFrames
+            mutation_rate: Probability of mutation
+            pospool: Position pools for replacement players
             posmap: Position mapping
-            probcol: Column name for probabilities
-            diversity_threshold: Minimum diversity for replacement lineups
-            max_attempts: Maximum attempts to generate diverse replacement
             
         Returns:
-            np.ndarray: Mutated population
+            np.ndarray: Mutated population sets
         """
-        if pospool is None or posmap is None:
-            logging.warning("pospool or posmap not provided for mutation, returning unchanged population")
-            return population_sets
-        
         pop_size, target_lineups, lineup_size = population_sets.shape
         mutated_population = population_sets.copy()
         
-        # Pre-calculate position indices for efficiency
-        pos_indices = self._calculate_position_indices(posmap)
+        # Convert pospool to arrays for faster access
+        if pospool is not None:
+            pos_arrays = self._prepare_position_arrays(pospool, posmap)
+        else:
+            pos_arrays = None
         
-        # Mutate each set with probability mutation_rate
         for set_idx in range(pop_size):
             if np.random.random() < mutation_rate:
-                mutated_population[set_idx] = self._mutate_lineup_set(
-                    population_sets[set_idx], pospool, pos_indices, probcol,
-                    diversity_threshold, max_attempts
+                mutated_population[set_idx] = self._mutate_set(
+                    population_sets[set_idx], pos_arrays, posmap
                 )
         
         return mutated_population
     
-    def _mutate_lineup_set(self, 
-                          lineup_set: np.ndarray,
-                          pospool: Dict[str, pd.DataFrame],
-                          pos_indices: Dict[str, tuple],
-                          probcol: str,
-                          diversity_threshold: float,
-                          max_attempts: int) -> np.ndarray:
-        """
-        Mutate a single lineup set by replacing some lineups
+    @staticmethod
+    def _prepare_position_arrays(pospool: Dict, posmap: Dict) -> Dict:
+        """Convert pospool to numpy arrays for faster access"""
+        pos_arrays = {}
         
-        Args:
-            lineup_set: Single set of lineups (target_lineups, lineup_size)
-            pospool: Dictionary of position DataFrames
-            pos_indices: Position indices mapping
-            probcol: Column name for probabilities
-            diversity_threshold: Minimum diversity for replacement lineups
-            max_attempts: Maximum attempts to generate diverse replacement
-            
-        Returns:
-            Mutated lineup set
+        for pos, df in pospool.items():
+            if len(df) > 0:
+                pos_arrays[pos] = df.index.values
+            else:
+                pos_arrays[pos] = np.array([])
+        
+        return pos_arrays
+    
+    def _mutate_set(self, 
+                   lineup_set: np.ndarray, 
+                   pos_arrays: Dict = None,
+                   posmap: Dict = None) -> np.ndarray:
+        """
+        Mutate a single lineup set using multiple strategies
         """
         target_lineups, lineup_size = lineup_set.shape
         mutated_set = lineup_set.copy()
         
-        # Determine how many lineups to replace (1-3 lineups typically)
-        n_replacements = np.random.randint(1, min(4, target_lineups + 1))
+        # Choose mutation strategy
+        mutation_strategies = ['player_swap', 'lineup_shuffle', 'position_replace', 'hybrid']
+        strategy = np.random.choice(mutation_strategies, p=[0.4, 0.2, 0.3, 0.1])
         
-        # Randomly select which lineups to replace
-        replacement_indices = np.random.choice(
-            target_lineups, n_replacements, replace=False
-        )
-        
-        for replace_idx in replacement_indices:
-            # Generate a new diverse lineup to replace the selected one
-            new_lineup = self._generate_diverse_replacement(
-                mutated_set, replace_idx, pospool, pos_indices, probcol,
-                diversity_threshold, max_attempts
-            )
-            
-            if new_lineup is not None:
-                mutated_set[replace_idx] = new_lineup
+        if strategy == 'player_swap':
+            mutated_set = self._player_swap_mutation(mutated_set)
+        elif strategy == 'lineup_shuffle':
+            mutated_set = self._lineup_shuffle_mutation(mutated_set)
+        elif strategy == 'position_replace':
+            mutated_set = self._position_replace_mutation(mutated_set, pos_arrays, posmap)
+        else:
+            mutated_set = self._hybrid_mutation(mutated_set, pos_arrays, posmap)
         
         return mutated_set
     
-    def _generate_diverse_replacement(self,
-                                    lineup_set: np.ndarray,
-                                    replace_idx: int,
-                                    pospool: Dict[str, pd.DataFrame],
-                                    pos_indices: Dict[str, tuple],
-                                    probcol: str,
-                                    diversity_threshold: float,
-                                    max_attempts: int) -> np.ndarray:
-        """
-        Generate a diverse replacement lineup for the set
+    @staticmethod
+    def _player_swap_mutation(lineup_set: np.ndarray) -> np.ndarray:
+        """Swap players between lineups in the set"""
+        target_lineups, lineup_size = lineup_set.shape
         
-        Args:
-            lineup_set: Current lineup set
-            replace_idx: Index of lineup to replace
-            pospool: Dictionary of position DataFrames
-            pos_indices: Position indices mapping
-            probcol: Column name for probabilities
-            diversity_threshold: Minimum diversity required
-            max_attempts: Maximum attempts to generate diverse lineup
-            
-        Returns:
-            New diverse lineup or None if failed
-        """
-        # Get other lineups in the set (excluding the one being replaced)
-        other_lineups = np.delete(lineup_set, replace_idx, axis=0)
+        if target_lineups < 2:
+            return lineup_set
         
-        best_lineup = None
-        best_diversity = 0.0
+        # Select two random lineups
+        lineup1_idx, lineup2_idx = np.random.choice(target_lineups, 2, replace=False)
         
-        # Try multiple attempts to generate a diverse lineup
-        for attempt in range(max_attempts):
-            candidate = self._generate_single_lineup(pospool, pos_indices, probcol)
-            
-            # Calculate minimum diversity to other lineups in the set
-            min_diversity = self._calculate_min_diversity_to_set(candidate, other_lineups)
-            
-            # Keep track of the most diverse candidate
-            if min_diversity > best_diversity:
-                best_lineup = candidate
-                best_diversity = min_diversity
-                
-                # If it meets our threshold, use it immediately
-                if min_diversity >= diversity_threshold:
-                    break
+        # Select random positions to swap
+        n_swaps = np.random.randint(1, max(2, lineup_size // 3))
+        swap_positions = np.random.choice(lineup_size, n_swaps, replace=False)
         
-        return best_lineup
+        # Perform swaps
+        for pos in swap_positions:
+            temp = lineup_set[lineup1_idx, pos]
+            lineup_set[lineup1_idx, pos] = lineup_set[lineup2_idx, pos]
+            lineup_set[lineup2_idx, pos] = temp
+        
+        return lineup_set
     
     @staticmethod
-    def _generate_single_lineup(pospool: Dict[str, pd.DataFrame],
-                              pos_indices: Dict[str, tuple],
-                              probcol: str) -> np.ndarray:
-        """Generate a single lineup using the existing populate logic"""
-        lineup_size = sum(end - start for start, end in pos_indices.values())
-        lineup = np.zeros(lineup_size, dtype=int)
+    def _lineup_shuffle_mutation(lineup_set: np.ndarray) -> np.ndarray:
+        """Shuffle players within individual lineups"""
+        target_lineups, lineup_size = lineup_set.shape
         
-        for pos, (start_idx, end_idx) in pos_indices.items():
-            if pos not in pospool:
-                continue
+        # Select random lineups to shuffle
+        n_lineups_to_shuffle = np.random.randint(1, max(2, target_lineups // 2))
+        lineup_indices = np.random.choice(target_lineups, n_lineups_to_shuffle, replace=False)
+        
+        for lineup_idx in lineup_indices:
+            # Shuffle a portion of the lineup
+            n_positions_to_shuffle = np.random.randint(2, lineup_size)
+            positions_to_shuffle = np.random.choice(lineup_size, n_positions_to_shuffle, replace=False)
+            
+            # Shuffle the selected positions
+            shuffled_players = lineup_set[lineup_idx, positions_to_shuffle].copy()
+            np.random.shuffle(shuffled_players)
+            lineup_set[lineup_idx, positions_to_shuffle] = shuffled_players
+        
+        return lineup_set
+    
+    def _position_replace_mutation(self, 
+                                  lineup_set: np.ndarray, 
+                                  pos_arrays: Dict = None,
+                                  posmap: Dict = None) -> np.ndarray:
+        """Replace players with others from the same position"""
+        if pos_arrays is None or posmap is None:
+            return self._player_swap_mutation(lineup_set)
+        
+        target_lineups, lineup_size = lineup_set.shape
+        
+        # Select random lineups to mutate
+        n_lineups_to_mutate = np.random.randint(1, max(2, target_lineups // 2))
+        lineup_indices = np.random.choice(target_lineups, n_lineups_to_mutate, replace=False)
+        
+        for lineup_idx in lineup_indices:
+            # Select random positions to replace
+            n_positions_to_replace = np.random.randint(1, max(2, lineup_size // 3))
+            position_indices = np.random.choice(lineup_size, n_positions_to_replace, replace=False)
+            
+            for pos_idx in position_indices:
+                # Determine position type for this slot
+                position_type = self._get_position_type_for_slot(pos_idx, posmap)
                 
-            pos_df = pospool[pos]
-            n_positions = end_idx - start_idx
-            
-            if len(pos_df) == 0:
-                continue
+                if position_type in pos_arrays and len(pos_arrays[position_type]) > 0:
+                    # Replace with random player from same position
+                    new_player = np.random.choice(pos_arrays[position_type])
+                    lineup_set[lineup_idx, pos_idx] = new_player
+        
+        return lineup_set
+    
+    def _hybrid_mutation(self, 
+                        lineup_set: np.ndarray, 
+                        pos_arrays: Dict = None,
+                        posmap: Dict = None) -> np.ndarray:
+        """Combine multiple mutation strategies"""
+        # Apply player swap first
+        lineup_set = self._player_swap_mutation(lineup_set)
+        
+        # Then apply position replacement with lower probability
+        if np.random.random() < 0.5:
+            lineup_set = self._position_replace_mutation(lineup_set, pos_arrays, posmap)
+        
+        return lineup_set
+    
+    @staticmethod
+    def _get_position_type_for_slot(slot_idx: int, posmap: Dict) -> str:
+        """Determine position type for a given slot index"""
+        if posmap is None:
+            return 'FLEX'  # Default fallback
+        
+        current_slot = 0
+        for pos, count in posmap.items():
+            if slot_idx < current_slot + count:
+                return pos
+            current_slot += count
+        
+        return 'FLEX'  # Fallback
+
+
+class MutateMultilineupSetsNumba(MutateMultilineupSets):
+    """Numba-optimized version for better performance"""
+    
+    def mutate(self, 
+               population_sets: np.ndarray,
+               mutation_rate: float = 0.1,
+               pospool: Dict = None,
+               posmap: Dict = None,
+               **kwargs) -> np.ndarray:
+        """Numba-optimized mutation"""
+        if not NUMBA_AVAILABLE:
+            return super().mutate(population_sets, mutation_rate, pospool, posmap, **kwargs)
+        
+        pop_size, target_lineups, lineup_size = population_sets.shape
+        
+        # Use numba-optimized implementation for basic mutations
+        return _mutate_sets_numba_impl(population_sets, mutation_rate)
+
+
+# Numba-optimized functions
+if NUMBA_AVAILABLE:
+    @njit
+    def _player_swap_mutation_numba(lineup_set):
+        """Numba-optimized player swap mutation"""
+        target_lineups, lineup_size = lineup_set.shape
+        
+        if target_lineups < 2:
+            return lineup_set
+        
+        # Select two random lineups
+        lineup1_idx = np.random.randint(0, target_lineups)
+        lineup2_idx = np.random.randint(0, target_lineups)
+        while lineup2_idx == lineup1_idx:
+            lineup2_idx = np.random.randint(0, target_lineups)
+        
+        # Select random positions to swap
+        n_swaps = max(1, lineup_size // 4)
+        
+        for _ in range(n_swaps):
+            pos = np.random.randint(0, lineup_size)
+            temp = lineup_set[lineup1_idx, pos]
+            lineup_set[lineup1_idx, pos] = lineup_set[lineup2_idx, pos]
+            lineup_set[lineup2_idx, pos] = temp
+        
+        return lineup_set
+    
+    @njit
+    def _lineup_shuffle_mutation_numba(lineup_set):
+        """Numba-optimized lineup shuffle mutation"""
+        target_lineups, lineup_size = lineup_set.shape
+        
+        # Select a random lineup to shuffle
+        lineup_idx = np.random.randint(0, target_lineups)
+        
+        # Simple shuffle of the entire lineup
+        for i in range(lineup_size):
+            j = np.random.randint(0, lineup_size)
+            temp = lineup_set[lineup_idx, i]
+            lineup_set[lineup_idx, i] = lineup_set[lineup_idx, j]
+            lineup_set[lineup_idx, j] = temp
+        
+        return lineup_set
+    
+    @njit(parallel=True)
+    def _mutate_sets_numba_impl(population_sets, mutation_rate):
+        """Numba-optimized mutation implementation"""
+        pop_size, target_lineups, lineup_size = population_sets.shape
+        mutated_population = population_sets.copy()
+        
+        for set_idx in prange(pop_size):
+            if np.random.random() < mutation_rate:
+                # Choose mutation strategy
+                strategy = np.random.randint(0, 2)
                 
-            # Use multidimensional_shifting for consistent selection
-            if probcol in pos_df.columns:
-                probs = pos_df[probcol].values
-            else:
-                # Equal probability if no prob column
-                probs = np.ones(len(pos_df)) / len(pos_df)
-            
-            # Ensure we don't try to select more players than available
-            n_select = min(n_positions, len(pos_df))
-            
-            if n_select > 0:
-                # Use numpy random choice with probabilities for selection
-                if len(probs) > 0 and np.sum(probs) > 0:
-                    # Normalize probabilities
-                    probs = probs / np.sum(probs)
-                    selected_indices = np.random.choice(
-                        pos_df.index.values, 
-                        size=n_select, 
-                        replace=False, 
-                        p=probs
+                if strategy == 0:
+                    mutated_population[set_idx] = _player_swap_mutation_numba(
+                        mutated_population[set_idx]
                     )
                 else:
-                    # Fallback to random selection without probabilities
-                    selected_indices = np.random.choice(
-                        pos_df.index.values, 
-                        size=n_select, 
-                        replace=False
+                    mutated_population[set_idx] = _lineup_shuffle_mutation_numba(
+                        mutated_population[set_idx]
                     )
-                
-                # Fill the lineup positions
-                for i, player_idx in enumerate(selected_indices):
-                    if start_idx + i < lineup_size:
-                        lineup[start_idx + i] = player_idx
         
-        return lineup
-    
-    @staticmethod
-    def _calculate_position_indices(posmap: Dict[str, int]) -> Dict[str, tuple]:
-        """Calculate start and end indices for each position in the lineup array"""
-        pos_indices = {}
-        current_idx = 0
-        
-        for pos, count in posmap.items():
-            start_idx = current_idx
-            end_idx = current_idx + count
-            pos_indices[pos] = (start_idx, end_idx)
-            current_idx = end_idx
-            
-        return pos_indices
-    
-    @staticmethod
-    def _calculate_min_diversity_to_set(candidate: np.ndarray, 
-                                      existing_lineups: np.ndarray) -> float:
-        """Calculate minimum Jaccard diversity between candidate and existing lineups"""
-        if len(existing_lineups) == 0:
-            return 1.0
-        
-        min_diversity = 1.0
-        candidate_set = set(candidate)
-        
-        for existing_lineup in existing_lineups:
-            existing_set = set(existing_lineup)
-            
-            # Calculate Jaccard diversity (1 - Jaccard similarity)
-            intersection = len(candidate_set.intersection(existing_set))
-            union = len(candidate_set.union(existing_set))
-            
-            if union > 0:
-                jaccard_similarity = intersection / union
-                jaccard_diversity = 1.0 - jaccard_similarity
-                min_diversity = min(min_diversity, jaccard_diversity)
-        
-        return min_diversity
+        return mutated_population
