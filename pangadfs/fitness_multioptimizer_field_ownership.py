@@ -61,7 +61,8 @@ class FitnessMultiOptimizerFieldOwnership(FitnessBase):
         
         return fitness
 
-    def _calculate_diversity(self, population_sets: np.ndarray, method: str) -> np.ndarray:
+    @staticmethod
+    def _calculate_diversity(population_sets: np.ndarray, method: str) -> np.ndarray:
         """Calculates the diversity for each lineup set."""
         n_sets = population_sets.shape[0]
         diversity_scores = np.zeros(n_sets)
@@ -85,7 +86,8 @@ class FitnessMultiOptimizerFieldOwnership(FitnessBase):
             diversity_scores[i] = np.mean(overlaps) if overlaps else 0
         return diversity_scores
 
-    def _calculate_ownership(self, population_sets: np.ndarray, ownership: np.ndarray, strategy: str) -> np.ndarray:
+    @staticmethod
+    def _calculate_ownership(population_sets: np.ndarray, ownership: np.ndarray, strategy: str) -> np.ndarray:
         """Calculates the ownership score for each lineup set based on the strategy."""
         lineup_ownerships = np.sum(ownership[population_sets], axis=2)
         
@@ -100,7 +102,8 @@ class FitnessMultiOptimizerFieldOwnership(FitnessBase):
             return np.var(lineup_ownerships, axis=1)
         return np.zeros(population_sets.shape[0])
 
-    def _normalize(self, data: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def _normalize(data: np.ndarray) -> np.ndarray:
         """Min-max normalization."""
         if np.all(data == data[0]):
             return np.ones_like(data)
