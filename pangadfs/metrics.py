@@ -27,7 +27,7 @@ def diversity(population: np.ndarray) -> np.ndarray:
     # Construct count matrix a: shape (N, U)
     a = np.zeros((N, U), dtype=np.uint8)
     rows = np.repeat(np.arange(N), K)
-    np.add.at(a, (rows, inverse), 1)
+    np.add.at(a, (rows, inverse.reshape(-1)), 1)
 
     # Pairwise dot product: overlap between lineups
     return a @ a.T

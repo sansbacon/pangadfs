@@ -5,13 +5,17 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterable, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import numpy as np
 import pandas as pd
 
-from stevedore.driver import DriverManager
-from stevedore.named import NamedExtensionManager
+try:
+    from stevedore.driver import DriverManager
+    from stevedore.named import NamedExtensionManager
+except ModuleNotFoundError:
+    DriverManager = None
+    NamedExtensionManager = None
 from pangadfs.profiler import GAProfiler
 
 
@@ -27,8 +31,9 @@ class GeneticAlgorithm:
 
     def __init__(self, 
                  ctx: Union[Dict, Any] = None,
-                 driver_managers: Dict[str, DriverManager] = None, 
-                 extension_managers: Dict[str, NamedExtensionManager] = None,
+                 driver_managers: Dict[str, Any] = None, 
+                 extension_managers: Dict[str, Any] = None,
+                 plugins: Dict[str, Any] = None,
                  use_defaults: bool = False):
         """Creates GeneticAlgorithm instance
 
@@ -36,6 +41,8 @@ class GeneticAlgorithm:
             ctx (dict): the context dict, AppConfig object, or other configuration scheme
             driver_managers (dict): key is namespace, value is DriverManager
             extension_managers (dict): key is namespace, value is NamedExtensionManager
+            plugins (dict): dependency-injected plugins keyed by namespace. Values may be
+                plugin instances/callables or lists for chained namespaces.
             use_defaults (bool): use default plugins
 
         Returns:
@@ -50,6 +57,7 @@ class GeneticAlgorithm:
         # add driver/extension managers
         self.driver_managers = driver_managers if driver_managers else {}
         self.extension_managers = extension_managers if extension_managers else {}
+        self.plugins = plugins if plugins else {}
 
         # Initialize profiler based on context settings
         profiling_enabled = False
@@ -63,7 +71,15 @@ class GeneticAlgorithm:
 
     def _load_plugins(self):
         """Loads default plugins for any namespace that doesn't have a plugin"""
+        if DriverManager is None or NamedExtensionManager is None:
+            raise ImportError(
+                'stevedore is required for use_defaults=True. '
+                'Install stevedore or pass plugins/manager instances directly.'
+            )
+
         for ns in self.PLUGIN_NAMESPACES:
+            if ns in self.plugins:
+                continue
             if ns not in self.driver_managers and ns not in self.extension_managers:
                 if ns == 'validate':
                     self.extension_managers[ns] = NamedExtensionManager(
@@ -79,6 +95,38 @@ class GeneticAlgorithm:
                         invoke_on_load=True
                     )
                     self.driver_managers[ns] = mgr
+
+    def _iter_plugins(self, namespace: str) -> List[Any]:
+        """Returns plugins for a namespace in priority order.
+
+        Priority:
+        1) dependency-injected plugins
+        2) stevedore DriverManager driver
+        3) stevedore NamedExtensionManager extension objects
+        """
+        if namespace in self.plugins:
+            plugin = self.plugins[namespace]
+            if isinstance(plugin, (list, tuple)):
+                return list(plugin)
+            return [plugin]
+
+        if mgr := self.driver_managers.get(namespace):
+            return [mgr.driver]
+
+        if ext_mgr := self.extension_managers.get(namespace):
+            return [ext.obj for ext in ext_mgr.extensions]
+
+        return []
+
+    @staticmethod
+    def _method(plugin: Any, method_name: str) -> Any:
+        """Returns method_name method if available, otherwise plugin if callable."""
+        method = getattr(plugin, method_name, None)
+        if callable(method):
+            return method
+        if callable(plugin):
+            return plugin
+        return None
 
     def crossover(self,
                   *,
@@ -97,25 +145,30 @@ class GeneticAlgorithm:
 
         """
         with self.profiler.time_operation('Crossover'):
-            if mgr := self.driver_managers.get('crossover'):
-                return mgr.driver.crossover(population=population, agg=agg, **kwargs)
+            plugins = self._iter_plugins('crossover')
 
             if agg:
                 pops = []
-                for ext in self.extension_managers['crossover'].extensions:
+                for plugin in plugins:
+                    method = self._method(plugin, 'crossover')
+                    if method is None:
+                        continue
                     try:
-                        pops.append(ext.obj.crossover(population=population, **kwargs))
+                        pops.append(method(population=population, **kwargs))
                     except Exception as e:
-                        logging.warning(f'Crossover plugin {ext} failed: {e}')
+                        logging.warning(f'Crossover plugin {plugin} failed: {e}')
                         continue
                 return np.concatenate(pops)
 
             # Sequential: each plugin crosses over the prior result
-            for ext in self.extension_managers['crossover'].extensions:
+            for plugin in plugins:
+                method = self._method(plugin, 'crossover')
+                if method is None:
+                    continue
                 try:
-                    population = ext.obj.crossover(population=population, **kwargs)
+                    population = method(population=population, **kwargs)
                 except Exception as e:
-                    logging.warning(f'Crossover plugin {ext} failed: {e}')
+                    logging.warning(f'Crossover plugin {plugin} failed: {e}')
                     continue
             return population
 
@@ -136,14 +189,14 @@ class GeneticAlgorithm:
 
         """
         with self.profiler.time_operation('Fitness Evaluation'):
-            if mgr := self.driver_managers.get('fitness'):
-                return mgr.driver.fitness(population=population, points=points, **kwargs)
-
-            for ext in self.extension_managers['fitness'].extensions:
+            for plugin in self._iter_plugins('fitness'):
+                method = self._method(plugin, 'fitness')
+                if method is None:
+                    continue
                 try:
-                    return ext.obj.fitness(population=population, points=points, **kwargs)
+                    return method(population=population, points=points, **kwargs)
                 except Exception as e:
-                    logging.warning(f'Fitness plugin {ext} failed: {e}')
+                    logging.warning(f'Fitness plugin {plugin} failed: {e}')
                     continue
 
     def mutate(self, 
@@ -163,14 +216,14 @@ class GeneticAlgorithm:
 
         """
         with self.profiler.time_operation('Mutation'):
-            if mgr := self.driver_managers.get('mutate'):
-                return mgr.driver.mutate(population=population, mutation_rate=mutation_rate, **kwargs)
-
-            for ext in self.extension_managers['mutate'].extensions:
+            for plugin in self._iter_plugins('mutate'):
+                method = self._method(plugin, 'mutate')
+                if method is None:
+                    continue
                 try:
-                    return ext.obj.mutate(population=population, mutation_rate=mutation_rate, **kwargs)
+                    return method(population=population, mutation_rate=mutation_rate, **kwargs)
                 except Exception as e:
-                    logging.warning(f'Mutate plugin {ext} failed: {e}')
+                    logging.warning(f'Mutate plugin {plugin} failed: {e}')
                     continue
 
     def optimize(self, **kwargs) -> Dict[str, Any]:
@@ -183,14 +236,14 @@ class GeneticAlgorithm:
             dict
 
         """
-        if mgr := self.driver_managers.get('optimize'):
-            return mgr.driver.optimize(ga=self, **kwargs)
-
-        for ext in self.extension_managers['optimize'].extensions:
+        for plugin in self._iter_plugins('optimize'):
+            method = self._method(plugin, 'optimize')
+            if method is None:
+                continue
             try:
-                return ext.obj.optimize(ga=self, **kwargs)
+                return method(ga=self, **kwargs)
             except Exception as e:
-                logging.warning(f'Optimize plugin {ext} failed: {e}')
+                logging.warning(f'Optimize plugin {plugin} failed: {e}')
                 continue
             
     def pool(self, *, csvpth: Path = None, **kwargs) -> pd.DataFrame:
@@ -205,13 +258,14 @@ class GeneticAlgorithm:
         
         """
         with self.profiler.time_operation('Pool Creation'):
-            if mgr := self.driver_managers.get('pool'):
-                return mgr.driver.pool(csvpth=csvpth, **kwargs)
-            for ext in self.extension_managers['pool'].extensions:
+            for plugin in self._iter_plugins('pool'):
+                method = self._method(plugin, 'pool')
+                if method is None:
+                    continue
                 try:
-                    return ext.obj.pool(csvpth=csvpth, **kwargs)
+                    return method(csvpth=csvpth, **kwargs)
                 except Exception as e:
-                    logging.error(f'Pool plugin {ext} failed: {e}')
+                    logging.error(f'Pool plugin {plugin} failed: {e}')
 
     def populate(self,
                  *,
@@ -241,25 +295,30 @@ class GeneticAlgorithm:
         )
 
         with self.profiler.time_operation('Initial Population'):
-            if mgr := self.driver_managers.get('populate'):
-                return mgr.driver.populate(**populate_kwargs)
+            plugins = self._iter_plugins('populate')
 
             if agg:
                 pops = []
-                for ext in self.extension_managers['populate'].extensions:
+                for plugin in plugins:
+                    method = self._method(plugin, 'populate')
+                    if method is None:
+                        continue
                     try:
-                        pops.append(ext.obj.populate(**populate_kwargs))
+                        pops.append(method(**populate_kwargs))
                     except Exception as e:
-                        logging.warning(f'Populate plugin {ext} failed: {e}')
+                        logging.warning(f'Populate plugin {plugin} failed: {e}')
                         continue
                 return np.concatenate(pops)
 
             # Use first valid populate plugin
-            for ext in self.extension_managers['populate'].extensions:
+            for plugin in plugins:
+                method = self._method(plugin, 'populate')
+                if method is None:
+                    continue
                 try:
-                    return ext.obj.populate(**populate_kwargs)
+                    return method(**populate_kwargs)
                 except Exception as e:
-                    logging.warning(f'Populate plugin {ext} failed: {e}')
+                    logging.warning(f'Populate plugin {plugin} failed: {e}')
                     continue
 
     def pospool(self, 
@@ -288,13 +347,14 @@ class GeneticAlgorithm:
         )
 
         with self.profiler.time_operation('Pospool'):
-            if mgr := self.driver_managers.get('pospool'):
-                return mgr.driver.pospool(**pospool_kwargs)
-            for ext in self.extension_managers['pospool'].extensions:
+            for plugin in self._iter_plugins('pospool'):
+                method = self._method(plugin, 'pospool')
+                if method is None:
+                    continue
                 try:
-                    return ext.obj.pospool(**pospool_kwargs)
+                    return method(**pospool_kwargs)
                 except Exception as e:
-                    logging.warning(f'Pospool plugin {ext} failed: {e}')
+                    logging.warning(f'Pospool plugin {plugin} failed: {e}')
                     continue
         
     def select(self,
@@ -323,14 +383,14 @@ class GeneticAlgorithm:
         )
 
         with self.profiler.time_operation('Selection'):
-            if mgr := self.driver_managers.get('select'):
-                return mgr.driver.select(**select_kwargs)
-
-            for ext in self.extension_managers['select'].extensions:
+            for plugin in self._iter_plugins('select'):
+                method = self._method(plugin, 'select')
+                if method is None:
+                    continue
                 try:
-                    return ext.obj.select(**select_kwargs)
+                    return method(**select_kwargs)
                 except Exception as e:
-                    logging.warning(f'Select plugin {ext} failed: {e}')
+                    logging.warning(f'Select plugin {plugin} failed: {e}')
                     continue
 
     def validate(self,
@@ -350,10 +410,10 @@ class GeneticAlgorithm:
             
         """
         with self.profiler.time_operation('Validation'):
-            if mgr := self.driver_managers.get('validate'):
-                return mgr.driver.validate(population=population, salaries=salaries, **kwargs)
-
             # Chain validators: each filters the population in sequence
-            for ext in self.extension_managers['validate'].extensions:
-                population = ext.obj.validate(population=population, salaries=salaries, **kwargs)
+            for plugin in self._iter_plugins('validate'):
+                method = self._method(plugin, 'validate')
+                if method is None:
+                    continue
+                population = method(population=population, salaries=salaries, **kwargs)
             return population

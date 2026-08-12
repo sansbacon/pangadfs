@@ -1,0 +1,47 @@
+{
+  "generation_validation": [
+    {
+      "population_size": 300.0,
+      "total_wall_s": 0.02488390000144136,
+      "total_profiled_s": 0.017799854278564453,
+      "setup_s": 0.017799854278564453,
+      "avg_generation_s": 0.0,
+      "population_build_s": 0.0,
+      "validation_total_s": 0.0,
+      "validation_avg_s": 0.0,
+      "fitness_total_s": 0.0,
+      "fitness_avg_s": 0.0,
+      "selection_total_s": 0.0
+    },
+    {
+      "population_size": 600.0,
+      "total_wall_s": 0.023840300000301795,
+      "total_profiled_s": 0.022361040115356445,
+      "setup_s": 0.00833582878112793,
+      "avg_generation_s": 0.0017531514167785645,
+      "population_build_s": 0.0,
+      "validation_total_s": 0.010882854461669922,
+      "validation_avg_s": 0.0012092060512966579,
+      "fitness_total_s": 0.0,
+      "fitness_avg_s": 0.0,
+      "selection_total_s": 0.0031423568725585938
+    }
+  ],
+  "diversity_selection": {
+    "population_size": 600.0,
+    "target_lineups": 10.0,
+    "diversity_avg_s": 0.133202999997593,
+    "diversity_min_s": 0.133202999997593,
+    "diversity_max_s": 0.133202999997593
+  },
+  "config": {
+    "population_sizes": [
+      300,
+      600
+    ],
+    "generations": 8,
+    "repeats": 1,
+    "diversity_population": 600,
+    "diversity_target_lineups": 10
+  }
+}

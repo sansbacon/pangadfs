@@ -61,36 +61,45 @@ class OptimizeMultiOptimizerFieldOwnership(OptimizeBase):
         salaries = pool[ga.ctx['ga_settings']['salary_column']].values
         ownership = pool[ownership_column].values if ownership_column in pool.columns else np.zeros_like(points)
 
-        # Import set-based plugins
+        # Import optional set-based plugins. Fall back to built-in implementations
+        # when optimized set plugins are not available in this repository.
+        populate_sets = None
+        crossover_sets = None
+        mutate_sets = None
         try:
             from pangadfs.populate_sets_optimized import PopulateMultilineupSetsOptimized
             from pangadfs.crossover_sets_optimized import CrossoverMultilineupSetsOptimized
             from pangadfs.mutate_sets_optimized import MutateMultilineupSetsOptimized
-        except ImportError as e:
-            raise ImportError(
-                "OptimizeMultiOptimizerFieldOwnership requires set-based plugins "
-                "(populate_sets_optimized, crossover_sets_optimized, mutate_sets_optimized) "
-                "which are not yet implemented. See REFACTORING.md for details."
-            ) from e
-        
-        # Initialize plugins
-        populate_sets = PopulateMultilineupSetsOptimized()
+            populate_sets = PopulateMultilineupSetsOptimized()
+            crossover_sets = CrossoverMultilineupSetsOptimized()
+            mutate_sets = MutateMultilineupSetsOptimized()
+        except ImportError:
+            logging.info('Set-optimized plugins not found. Using built-in fallback set operators.')
+
         fitness_mo = FitnessMultiOptimizerFieldOwnership()
-        crossover_sets = CrossoverMultilineupSetsOptimized()
-        mutate_sets = MutateMultilineupSetsOptimized()
         
         # Create initial population of lineup sets
         logging.info('Creating initial population for multi-objective optimization with field ownership')
         
-        initial_population_sets = populate_sets.populate(
-            pospool=pospool,
-            posmap=ga.ctx['site_settings']['posmap'],
-            population_size=pop_size,
-            target_lineups=target_lineups,
-            probcol='prob',
-            lineup_pool_size=ga.ctx['ga_settings'].get('lineup_pool_size', 100000),
-            diversity_threshold=ga.ctx['ga_settings'].get('diversity_threshold', 0.3)
-        )
+        if populate_sets is not None:
+            initial_population_sets = populate_sets.populate(
+                pospool=pospool,
+                posmap=ga.ctx['site_settings']['posmap'],
+                population_size=pop_size,
+                target_lineups=target_lineups,
+                probcol='prob',
+                lineup_pool_size=ga.ctx['ga_settings'].get('lineup_pool_size', 100000),
+                diversity_threshold=ga.ctx['ga_settings'].get('diversity_threshold', 0.3)
+            )
+        else:
+            initial_population_sets = self._fallback_populate_sets(
+                ga=ga,
+                pospool=pospool,
+                pool=pool,
+                salaries=salaries,
+                population_size=pop_size,
+                target_lineups=target_lineups,
+            )
 
         # Validate lineup sets for salary constraints
         logging.info('Validating lineup sets for salary constraints')
@@ -139,20 +148,39 @@ class OptimizeMultiOptimizerFieldOwnership(OptimizeBase):
 
             # Crossover with tournament selection
             tournament_size = ga.ctx['ga_settings'].get('tournament_size', 3)
-            crossed_over_sets = crossover_sets.crossover(
-                population_sets=population_sets,
-                fitness_scores=population_fitness,
-                tournament_size=tournament_size
-            )
+            if crossover_sets is not None:
+                crossed_over_sets = crossover_sets.crossover(
+                    population_sets=population_sets,
+                    fitness_scores=population_fitness,
+                    tournament_size=tournament_size
+                )
+            else:
+                crossed_over_sets = self._fallback_crossover_sets(
+                    population_sets=population_sets,
+                    fitness_scores=population_fitness,
+                    tournament_size=tournament_size,
+                )
 
             # Mutation
             mutation_rate = ga.ctx['ga_settings'].get('mutation_rate', 0.1)
-            mutated_sets = mutate_sets.mutate(
-                population_sets=crossed_over_sets,
-                mutation_rate=mutation_rate,
-                pospool=pospool,
-                posmap=ga.ctx['site_settings']['posmap']
-            )
+            if mutate_sets is not None:
+                mutated_sets = mutate_sets.mutate(
+                    population_sets=crossed_over_sets,
+                    mutation_rate=mutation_rate,
+                    pospool=pospool,
+                    posmap=ga.ctx['site_settings']['posmap']
+                )
+            else:
+                mutated_sets = self._fallback_mutate_sets(
+                    ga=ga,
+                    population_sets=crossed_over_sets,
+                    mutation_rate=mutation_rate,
+                    pospool=pospool,
+                    posmap=ga.ctx['site_settings']['posmap'],
+                    pool=pool,
+                    salaries=salaries,
+                    salary_cap=ga.ctx['site_settings']['salary_cap'],
+                )
 
             # Combine elite and mutated sets
             if len(elite_sets) > 0:
@@ -222,6 +250,97 @@ class OptimizeMultiOptimizerFieldOwnership(OptimizeBase):
             results['profiling'] = ga.profiler.export_to_dict()
         
         return results
+
+    @staticmethod
+    def _fallback_crossover_sets(population_sets: np.ndarray,
+                                 fitness_scores: np.ndarray,
+                                 tournament_size: int) -> np.ndarray:
+        """Fallback set crossover using tournament-selected parent sets."""
+        pop_size, target_lineups, _ = population_sets.shape
+        tournament_size = max(2, min(int(tournament_size), pop_size))
+
+        children = np.empty_like(population_sets)
+        for i in range(pop_size):
+            p1 = OptimizeMultiOptimizerFieldOwnership._tournament_pick(fitness_scores, tournament_size)
+            p2 = OptimizeMultiOptimizerFieldOwnership._tournament_pick(fitness_scores, tournament_size)
+            mask = np.random.randint(0, 2, size=target_lineups).astype(bool)
+            children[i] = np.where(mask[:, None], population_sets[p1], population_sets[p2])
+
+        return children
+
+    @staticmethod
+    def _tournament_pick(fitness_scores: np.ndarray, tournament_size: int) -> int:
+        contenders = np.random.choice(len(fitness_scores), size=tournament_size, replace=False)
+        winner_local = np.argmax(fitness_scores[contenders])
+        return int(contenders[winner_local])
+
+    def _fallback_populate_sets(self,
+                                ga,
+                                pospool: Dict[str, np.ndarray],
+                                pool,
+                                salaries: np.ndarray,
+                                population_size: int,
+                                target_lineups: int) -> np.ndarray:
+        """Fallback set population generator built from core GA operators."""
+        sets = []
+        posmap = ga.ctx['site_settings']['posmap']
+        for _ in range(population_size):
+            lineups = ga.populate(
+                pospool=pospool,
+                posmap=posmap,
+                population_size=target_lineups,
+            )
+            lineups = ga.validate(
+                population=lineups,
+                salaries=salaries,
+                salary_cap=ga.ctx['site_settings']['salary_cap'],
+                pool=pool,
+                posmap=posmap,
+                position_column=ga.ctx['ga_settings']['position_column'],
+                flex_positions=ga.ctx['site_settings']['flex_positions'],
+            )
+
+            if len(lineups) == 0:
+                lineups = ga.populate(pospool=pospool, posmap=posmap, population_size=target_lineups)
+
+            if len(lineups) < target_lineups:
+                reps = np.random.choice(len(lineups), size=target_lineups - len(lineups), replace=True)
+                lineups = np.vstack((lineups, lineups[reps]))
+
+            sets.append(lineups[:target_lineups])
+
+        return np.array(sets)
+
+    def _fallback_mutate_sets(self,
+                              ga,
+                              population_sets: np.ndarray,
+                              mutation_rate: float,
+                              pospool,
+                              posmap,
+                              pool,
+                              salaries: np.ndarray,
+                              salary_cap: int) -> np.ndarray:
+        """Fallback set mutation by replacing individual lineups probabilistically."""
+        mutated = population_sets.copy()
+        pop_size, target_lineups, _ = mutated.shape
+
+        for i in range(pop_size):
+            for j in range(target_lineups):
+                if np.random.random() < mutation_rate:
+                    replacement = ga.populate(pospool=pospool, posmap=posmap, population_size=1)
+                    replacement = ga.validate(
+                        population=replacement,
+                        salaries=salaries,
+                        salary_cap=salary_cap,
+                        pool=pool,
+                        posmap=posmap,
+                        position_column=ga.ctx['ga_settings']['position_column'],
+                        flex_positions=ga.ctx['site_settings']['flex_positions'],
+                    )
+                    if len(replacement) > 0:
+                        mutated[i, j] = replacement[0]
+
+        return mutated
 
     @staticmethod
     def _validate_lineup_sets(population_sets: np.ndarray, 

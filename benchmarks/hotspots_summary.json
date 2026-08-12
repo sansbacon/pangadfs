@@ -1,0 +1,22 @@
+{
+  "default": {
+    "optimize_driver": "optimize_default",
+    "population_size": 600,
+    "generations": 6,
+    "total_profiled_s": 0.0401761531829834,
+    "setup_s": 0.03172564506530762,
+    "avg_generation_s": 0.0014084180196126301,
+    "prof_file": "benchmarks\\hotspots_optimize_default.prof",
+    "text_report": "benchmarks\\hotspots_optimize_default.txt"
+  },
+  "multilineup": {
+    "optimize_driver": "optimize_multilineup",
+    "population_size": 600,
+    "generations": 6,
+    "total_profiled_s": 0.03817319869995117,
+    "setup_s": 0.033624887466430664,
+    "avg_generation_s": 0.001516103744506836,
+    "prof_file": "benchmarks\\hotspots_optimize_multilineup.prof",
+    "text_report": "benchmarks\\hotspots_optimize_multilineup.txt"
+  }
+}

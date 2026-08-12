@@ -1,0 +1,28 @@
+         1558557 function calls (1557847 primitive calls) in 0.355 seconds
+
+   Ordered by: cumulative time
+   List reduced from 733 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.355    0.355 ga.py:176(optimize)
+        1    0.000    0.000    0.355    0.355 optimize.py:276(optimize)
+        1    0.004    0.004    0.313    0.313 optimize.py:431(_select_diverse_lineups)
+     8136    0.006    0.000    0.307    0.000 optimize.py:483(_candidate_overlap)
+     8136    0.018    0.000    0.301    0.000 optimize.py:76(_max_jaccard_against_selected_numba)
+    40665    0.204    0.000    0.277    0.000 optimize.py:21(_jaccard_similarity_sorted_py)
+1420745/1420190    0.074    0.000    0.074    0.000 {built-in method builtins.len}
+        1    0.000    0.000    0.018    0.018 ga.py:265(pospool)
+        1    0.000    0.000    0.018    0.018 pospool.py:14(pospool)
+    42/18    0.000    0.000    0.016    0.001 indexing.py:1192(__getitem__)
+    42/18    0.000    0.000    0.016    0.001 indexing.py:1383(_getitem_tuple)
+    42/18    0.000    0.000    0.016    0.001 indexing.py:1058(_getitem_lowerdim)
+       24    0.000    0.000    0.013    0.001 indexing.py:1415(_getitem_axis)
+       17    0.000    0.000    0.008    0.000 indexing.py:1352(_getitem_iterable)
+        1    0.000    0.000    0.008    0.008 ga.py:216(populate)
+        1    0.000    0.000    0.008    0.008 populate.py:16(populate)
+    40659    0.007    0.000    0.007    0.000 {built-in method builtins.max}
+        6    0.002    0.000    0.006    0.001 sampling.py:18(multidimensional_shifting)
+       17    0.000    0.000    0.006    0.000 indexing.py:1550(_get_listlike_indexer)
+       17    0.000    0.000    0.006    0.000 base.py:6288(_get_indexer_strict)
+
+
