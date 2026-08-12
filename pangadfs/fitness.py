@@ -14,7 +14,7 @@ class FitnessDefault(FitnessBase):
                 *, 
                 population: np.ndarray, 
                 points: np.ndarray,
-                **kwargs):
+                **kwargs) -> np.ndarray:
         """Assesses population fitness using supplied mapping
         
         Args:

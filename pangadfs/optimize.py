@@ -93,77 +93,31 @@ class OptimizeDefault(OptimizeBase):
         population = initial_population.copy()
 
         for i in range(1, ga.ctx['ga_settings']['n_generations'] + 1):
-            # Start generation timing
             ga.profiler.start_generation(i)
 
-            # end program after n generations if not improving
             if n_unimproved == ga.ctx['ga_settings']['stop_criteria']:
                 break
 
-            # display progress information with verbose parameter
             if ga.ctx['ga_settings'].get('verbose'):
-                logging.info(f'Starting generation {i}')
-                logging.info(f'Best lineup score {best_fitness}')
+                logging.info(f'Starting generation {i}, best={best_fitness}')
 
-            # select the population
-            # here, we are holding back the fittest 20% to ensure
-            # that crossover and mutation do not overwrite good individuals
-            elite = ga.select(
-                population=population, 
-                population_fitness=population_fitness, 
-                n=len(population) // ga.ctx['ga_settings'].get('elite_divisor', 5),
-                method=ga.ctx['ga_settings'].get('elite_method', 'fittest')
+            # Evolve population: select → crossover → mutate → validate → fitness
+            population, population_fitness = self._evolve_population(
+                ga, population, population_fitness, salaries, pool, n_unimproved
             )
 
-            selected = ga.select(
-                population=population, 
-                population_fitness=population_fitness, 
-                n=len(population),
-                method=ga.ctx['ga_settings'].get('select_method', 'roulette')
-            )
-
-            # cross over the population
-            # here, we use uniform crossover, which splits the population
-            # and randomly exchanges 0 - all chromosomes
-            crossed_over = ga.crossover(population=selected, method=ga.ctx['ga_settings'].get('crossover_method', 'uniform'))
-
-            # mutate the crossed over population (leave elite alone)
-            # can use fixed rate or variable to reduce mutation over generations
-            # here we use a variable rate that increases if no improvement is found
-            mutation_rate = ga.ctx['ga_settings'].get('mutation_rate', max(.05, n_unimproved / 50))
-            mutated = ga.mutate(population=crossed_over, mutation_rate=mutation_rate)
-
-            # validate the population (elite + mutated)
-            population = ga.validate(
-                population=np.vstack((elite, mutated)), 
-                salaries=salaries, 
-                salary_cap=ga.ctx['site_settings']['salary_cap'],
-                pool=pool,
-                posmap=ga.ctx['site_settings']['posmap'],
-                position_column=ga.ctx['ga_settings']['position_column'],
-                flex_positions=ga.ctx['site_settings']['flex_positions']
-            )
-            
-            # assess fitness and get the best score
-            population_fitness = ga.fitness(population=population, points=points)
+            # Track best solution
             omidx = population_fitness.argmax()
             generation_max = population_fitness[omidx]
-        
-            # if new best score, then set n_unimproved to 0
-            # and save the new best score and lineup
-            # otherwise increment n_unimproved
+
             if generation_max > best_fitness:
-                logging.info(f'Lineup improved to {generation_max}')
                 best_fitness = generation_max
                 best_lineup = population[omidx]
                 n_unimproved = 0
-                # Mark when best solution was found
                 ga.profiler.mark_best_solution(i)
             else:
                 n_unimproved += 1
-                logging.info(f'Lineup unimproved {n_unimproved} times')
-            
-            # End generation timing
+
             ga.profiler.end_generation()
 
         # End profiling
@@ -183,6 +137,63 @@ class OptimizeDefault(OptimizeBase):
             results['profiling'] = ga.profiler.export_to_dict()
         
         return results
+
+    def _evolve_population(self, ga, population, population_fitness, salaries, pool, n_unimproved):
+        """Single generation: select → crossover → mutate → validate → fitness.
+        
+        Args:
+            ga: GeneticAlgorithm instance
+            population: current population array
+            population_fitness: current fitness array
+            salaries: salary array for validation
+            pool: player pool DataFrame
+            n_unimproved: generations without improvement (affects mutation rate)
+            
+        Returns:
+            Tuple of (new_population, new_fitness)
+        """
+        settings = ga.ctx['ga_settings']
+        site = ga.ctx['site_settings']
+
+        # Elite preservation
+        elite = ga.select(
+            population=population,
+            population_fitness=population_fitness,
+            n=len(population) // settings.get('elite_divisor', 5),
+            method=settings.get('elite_method', 'fittest')
+        )
+
+        # Selection for breeding
+        selected = ga.select(
+            population=population,
+            population_fitness=population_fitness,
+            n=len(population),
+            method=settings.get('select_method', 'roulette')
+        )
+
+        # Crossover + mutation
+        crossed_over = ga.crossover(
+            population=selected,
+            method=settings.get('crossover_method', 'uniform')
+        )
+        mutation_rate = settings.get('mutation_rate', max(.05, n_unimproved / 50))
+        mutated = ga.mutate(population=crossed_over, mutation_rate=mutation_rate)
+
+        # Validate elite + mutated
+        population = ga.validate(
+            population=np.vstack((elite, mutated)),
+            salaries=salaries,
+            salary_cap=site['salary_cap'],
+            pool=pool,
+            posmap=site['posmap'],
+            position_column=settings['position_column'],
+            flex_positions=site['flex_positions']
+        )
+
+        # Assess fitness
+        points = pool[settings['points_column']].values
+        population_fitness = ga.fitness(population=population, points=points)
+        return population, population_fitness
 
 
 class OptimizeMultilineup(OptimizeBase):

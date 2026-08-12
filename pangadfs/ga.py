@@ -5,7 +5,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, Iterable, Union, Optional
+from typing import Any, Dict, Iterable, Union
 
 import numpy as np
 import pandas as pd
@@ -96,36 +96,26 @@ class GeneticAlgorithm:
             np.ndarray: the crossed-over population
 
         """
-        logging.debug('{} {}'.format(population, agg))
-
-        # combine keyword arguments with **kwargs
-        params = locals().copy()
-        params.pop('self', None)
-        kwargs = params.pop('kwargs')
-
         with self.profiler.time_operation('Crossover'):
-            # if there is a driver, then use it and run once
             if mgr := self.driver_managers.get('crossover'):
-                return mgr.driver.crossover(**params, **kwargs)
+                return mgr.driver.crossover(population=population, agg=agg, **kwargs)
 
-            # if agg=True, then aggregate crossed over populations
-            if kwargs.get('agg'):
+            if agg:
                 pops = []
                 for ext in self.extension_managers['crossover'].extensions:
                     try:
-                        pops.append(ext.obj.crossover(**params, **kwargs))
-                    except:
+                        pops.append(ext.obj.crossover(population=population, **kwargs))
+                    except Exception as e:
+                        logging.warning(f'Crossover plugin {ext} failed: {e}')
                         continue
-                return np.aggregate(pops)
+                return np.concatenate(pops)
 
-            # otherwise, run crossover for each plugin
-            # after first time, crosses over prior crossed-over population
-            population = params['population']
+            # Sequential: each plugin crosses over the prior result
             for ext in self.extension_managers['crossover'].extensions:
                 try:
-                    params['population'] = population
-                    population = ext.obj.crossover(**kwargs)
-                except:
+                    population = ext.obj.crossover(population=population, **kwargs)
+                except Exception as e:
+                    logging.warning(f'Crossover plugin {ext} failed: {e}')
                     continue
             return population
 
@@ -145,23 +135,15 @@ class GeneticAlgorithm:
             np.ndarray: population fitness as 1D array of float
 
         """
-        logging.debug('{} {}'.format(population, points))
-
-        # combine keyword arguments with **kwargs
-        params = locals().copy()
-        params.pop('self', None)
-        kwargs = params.pop('kwargs')
-
         with self.profiler.time_operation('Fitness Evaluation'):
-            # if there is a driver, then use it and run once
             if mgr := self.driver_managers.get('fitness'):
-                return mgr.driver.fitness(**params, **kwargs)
+                return mgr.driver.fitness(population=population, points=points, **kwargs)
 
-            # otherwise, return fitness for first valid plugin
             for ext in self.extension_managers['fitness'].extensions:
                 try:
-                    return ext.obj.fitness(**params, **kwargs)
-                except:
+                    return ext.obj.fitness(population=population, points=points, **kwargs)
+                except Exception as e:
+                    logging.warning(f'Fitness plugin {ext} failed: {e}')
                     continue
 
     def mutate(self, 
@@ -180,25 +162,18 @@ class GeneticAlgorithm:
             np.ndarray: same shape and dtype as population
 
         """
-        # combine keyword arguments with **kwargs
-        params = locals().copy()
-        params.pop('self', None)
-        kwargs = params.pop('kwargs')
-
         with self.profiler.time_operation('Mutation'):
-            # if there is a driver, then use it and run once
             if mgr := self.driver_managers.get('mutate'):
-                return mgr.driver.mutate(**params, **kwargs)
+                return mgr.driver.mutate(population=population, mutation_rate=mutation_rate, **kwargs)
 
-            # otherwise, mutate with first valid plugin
             for ext in self.extension_managers['mutate'].extensions:
                 try:
-                    return ext.obj.mutate(**params, **kwargs)
-                except:
+                    return ext.obj.mutate(population=population, mutation_rate=mutation_rate, **kwargs)
+                except Exception as e:
+                    logging.warning(f'Mutate plugin {ext} failed: {e}')
                     continue
 
-    def optimize(self, 
-                 **kwargs) -> Dict[str, Any]:
+    def optimize(self, **kwargs) -> Dict[str, Any]:
         """Optimizes population
 
         Args:
@@ -208,21 +183,14 @@ class GeneticAlgorithm:
             dict
 
         """
-        # combine keyword arguments with **kwargs
-        # need to figure out best way to pass ga to optimize
-        params = locals().copy()
-        params['ga'] = params.pop('self', None)
-        kwargs = params.pop('kwargs')
-
-        # if there is a driver, then use it and run once
         if mgr := self.driver_managers.get('optimize'):
-            return mgr.driver.optimize(**params, **kwargs)
+            return mgr.driver.optimize(ga=self, **kwargs)
 
-        # otherwise, optimize with first valid plugin
         for ext in self.extension_managers['optimize'].extensions:
             try:
-                return ext.obj.optimize(**params, **kwargs)
-            except:
+                return ext.obj.optimize(ga=self, **kwargs)
+            except Exception as e:
+                logging.warning(f'Optimize plugin {ext} failed: {e}')
                 continue
             
     def pool(self, *, csvpth: Path = None, **kwargs) -> pd.DataFrame:
@@ -236,19 +204,14 @@ class GeneticAlgorithm:
             pd.DataFrame: initial pool of players
         
         """
-        # combine keyword arguments with **kwargs
-        params = locals().copy()
-        params.pop('self', None)
-        kwargs = params.pop('kwargs')
-
         with self.profiler.time_operation('Pool Creation'):
             if mgr := self.driver_managers.get('pool'):
-                return mgr.driver.pool(**params, **kwargs)   
+                return mgr.driver.pool(csvpth=csvpth, **kwargs)
             for ext in self.extension_managers['pool'].extensions:
                 try:
-                    return ext.obj.pool(**params, **kwargs)  
-                except:
-                    logging.error(f'Could not load {ext}')
+                    return ext.obj.pool(csvpth=csvpth, **kwargs)
+                except Exception as e:
+                    logging.error(f'Pool plugin {ext} failed: {e}')
 
     def populate(self,
                  *,
@@ -256,7 +219,7 @@ class GeneticAlgorithm:
                  posmap: Dict[str, int] = None,
                  population_size: int = None,
                  probcol: str = 'prob',
-                 agg: bool = 'False',
+                 agg: bool = False,
                  **kwargs) -> np.ndarray:
         """Creates initial population of specified size
         
@@ -264,42 +227,39 @@ class GeneticAlgorithm:
             pospool (Dict[str, pd.DataFrame]): pool segmented by position
             posmap (Dict[str, int]): positions & accompanying roster slots
             population_size (int): number of individuals to create
-            probcol (str): the dataframe column with probabilities, default 'probs'
-            agg (bool): default False. Aggregate multiple crossovers if True.
+            probcol (str): the dataframe column with probabilities, default 'prob'
+            agg (bool): default False. Aggregate multiple populate plugins if True.
             **kwargs: Keyword arguments for plugins (other than default)
 
         Returns:
             np.ndarray: the population
 
         """
-        logging.debug('{} {} {} {}'.format(pospool, posmap, population_size, probcol))
-
-        # combine keyword arguments with **kwargs
-        params = locals().copy()
-        params.pop('self', None)
-        agg = params.pop('agg')
-        kwargs = params.pop('kwargs')
+        populate_kwargs = dict(
+            pospool=pospool, posmap=posmap,
+            population_size=population_size, probcol=probcol, **kwargs
+        )
 
         with self.profiler.time_operation('Initial Population'):
-            # if there is a driver, then use it and run once
             if mgr := self.driver_managers.get('populate'):
-                return mgr.driver.populate(**params, **kwargs)
+                return mgr.driver.populate(**populate_kwargs)
 
-            # if agg=True, then aggregate populations
             if agg:
                 pops = []
                 for ext in self.extension_managers['populate'].extensions:
                     try:
-                        pops.append(ext.obj.populate(**params, **kwargs))  
-                    except:
+                        pops.append(ext.obj.populate(**populate_kwargs))
+                    except Exception as e:
+                        logging.warning(f'Populate plugin {ext} failed: {e}')
                         continue
                 return np.concatenate(pops)
 
-            # otherwise, run populate using first valid plugin
-            for ext in self.extension_managers['crossover'].extensions:
+            # Use first valid populate plugin
+            for ext in self.extension_managers['populate'].extensions:
                 try:
-                    return ext.obj.populate(**kwargs)
-                except:
+                    return ext.obj.populate(**populate_kwargs)
+                except Exception as e:
+                    logging.warning(f'Populate plugin {ext} failed: {e}')
                     continue
 
     def pospool(self, 
@@ -322,22 +282,19 @@ class GeneticAlgorithm:
             Dict[str, pd.DataFrame] where keys == posfilter.keys
 
         """
-        logging.debug('{} {} {} {}'.format(pool, posfilter, column_mapping, flex_positions))
-
-        # combine keyword arguments with **kwargs
-        params = locals().copy()
-        params.pop('self', None)
-        kwargs = params.pop('kwargs')
+        pospool_kwargs = dict(
+            pool=pool, posfilter=posfilter,
+            column_mapping=column_mapping, flex_positions=flex_positions, **kwargs
+        )
 
         with self.profiler.time_operation('Pospool'):
-            # if there is a driver, then use it and run once
-            # otherwise, run pospool using first valid plugin
-            if mgr := self.driver_managers.get('pospool'): 
-                return mgr.driver.pospool(**params, **kwargs)
+            if mgr := self.driver_managers.get('pospool'):
+                return mgr.driver.pospool(**pospool_kwargs)
             for ext in self.extension_managers['pospool'].extensions:
                 try:
-                    return ext.obj.pospool(**params, **kwargs)  
-                except:
+                    return ext.obj.pospool(**pospool_kwargs)
+                except Exception as e:
+                    logging.warning(f'Pospool plugin {ext} failed: {e}')
                     continue
         
     def select(self,
@@ -353,31 +310,27 @@ class GeneticAlgorithm:
             population (np.ndarray): the population to cross over, is 2D array
             population_fitness (np.ndarray): 1D array of float
             n (int): number of individuals to select
-            method (str): the selection method, default roulette
+            method (str): the selection method, default 'fittest'
             **kwargs: Keyword arguments for plugins (other than default)
 
         Returns:
-            np.ndarray: population fitness as 1D array of float
+            np.ndarray: selected population
 
         """
-        logging.debug('Selection method {}, n is {}'.format(method, n))
-        logging.debug('Pop size {}, fitness {}'.format(len(population), population_fitness.mean()))
-
-        # combine keyword arguments with **kwargs
-        params = locals().copy()
-        params.pop('self', None)
-        kwargs = params.pop('kwargs')
+        select_kwargs = dict(
+            population=population, population_fitness=population_fitness,
+            n=n, method=method, **kwargs
+        )
 
         with self.profiler.time_operation('Selection'):
-            # if there is a driver, then use it and run once
             if mgr := self.driver_managers.get('select'):
-                return mgr.driver.select(**params, **kwargs)
+                return mgr.driver.select(**select_kwargs)
 
-            # otherwise, return select for first valid plugin
             for ext in self.extension_managers['select'].extensions:
                 try:
-                    return ext.obj.select(**params, **kwargs)
-                except:
+                    return ext.obj.select(**select_kwargs)
+                except Exception as e:
+                    logging.warning(f'Select plugin {ext} failed: {e}')
                     continue
 
     def validate(self,
@@ -396,18 +349,11 @@ class GeneticAlgorithm:
             np.ndarray: same width and dtype as population. Likely less rows due to exclusions.
             
         """
-        logging.debug(f'Salaries {salaries}')
-
-        # combine keyword arguments with **kwargs
-        params = locals().copy()
-        params.pop('self', None)
-        kwargs = params.pop('kwargs')
-
         with self.profiler.time_operation('Validation'):
             if mgr := self.driver_managers.get('validate'):
-                return mgr.driver.validate(**params, **kwargs)
-            population = params['population']
+                return mgr.driver.validate(population=population, salaries=salaries, **kwargs)
+
+            # Chain validators: each filters the population in sequence
             for ext in self.extension_managers['validate'].extensions:
-                params['population'] = population
-                population = ext.obj.validate(**params, **kwargs)
+                population = ext.obj.validate(population=population, salaries=salaries, **kwargs)
             return population

@@ -7,7 +7,8 @@ from typing import Tuple
 import numpy as np
 
 from pangadfs.base import CrossoverBase
-from pangadfs.misc import diversity, parents
+from pangadfs.metrics import diversity
+from pangadfs.sampling import parents
 
 
 class CrossoverDefault(CrossoverBase):
