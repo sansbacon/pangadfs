@@ -174,3 +174,49 @@ def test_validate(p, pop, ga):
     assert isinstance(vpop, np.ndarray)
     assert vpop.size > 0
     assert len(pop) >= len(vpop)
+
+
+def test_di_plugins_used_for_dispatch(test_directory):
+    class PoolPlugin:
+        def pool(self, *, csvpth=None, **kwargs):
+            return pd.read_csv(csvpth)
+
+    ga = GeneticAlgorithm(plugins={'pool': PoolPlugin()})
+    pool = ga.pool(csvpth=test_directory / 'test_pool.csv')
+    assert isinstance(pool, pd.core.api.DataFrame)
+    assert not pool.empty
+
+
+def test_di_validate_plugin_chain():
+    class DropLast:
+        def validate(self, *, population=None, salaries=None, **kwargs):
+            return population[:-1]
+
+    class DropFirst:
+        def validate(self, *, population=None, salaries=None, **kwargs):
+            return population[1:]
+
+    population = np.arange(20).reshape(4, 5)
+    salaries = np.ones(20)
+    ga = GeneticAlgorithm(plugins={'validate': [DropLast(), DropFirst()]})
+
+    out = ga.validate(population=population, salaries=salaries)
+    assert out.shape == (2, 5)
+
+
+def test_di_crossover_agg():
+    class AddOne:
+        def crossover(self, *, population=None, **kwargs):
+            return population + 1
+
+    class AddTwo:
+        def crossover(self, *, population=None, **kwargs):
+            return population + 2
+
+    population = np.array([[1, 2], [3, 4]])
+    ga = GeneticAlgorithm(plugins={'crossover': [AddOne(), AddTwo()]})
+
+    out = ga.crossover(population=population, agg=True)
+    assert out.shape == (4, 2)
+    assert np.array_equal(out[:2], population + 1)
+    assert np.array_equal(out[2:], population + 2)

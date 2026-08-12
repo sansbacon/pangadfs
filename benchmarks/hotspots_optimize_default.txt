@@ -1,0 +1,28 @@
+         40437 function calls (39546 primitive calls) in 0.038 seconds
+
+   Ordered by: cumulative time
+   List reduced from 936 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.038    0.038 ga.py:176(optimize)
+        1    0.000    0.000    0.038    0.038 optimize.py:86(optimize)
+        1    0.000    0.000    0.015    0.015 ga.py:265(pospool)
+        1    0.000    0.000    0.015    0.015 pospool.py:14(pospool)
+        1    0.000    0.000    0.011    0.011 ga.py:196(pool)
+        1    0.000    0.000    0.011    0.011 pool.py:15(pool)
+        1    0.000    0.000    0.009    0.009 readers.py:349(read_csv)
+        1    0.000    0.000    0.009    0.009 readers.py:258(_read)
+     22/8    0.000    0.000    0.008    0.001 indexing.py:1192(__getitem__)
+     22/8    0.000    0.000    0.008    0.001 indexing.py:1383(_getitem_tuple)
+     22/8    0.000    0.000    0.008    0.001 indexing.py:1058(_getitem_lowerdim)
+      5/4    0.000    0.000    0.007    0.002 <frozen importlib._bootstrap>:1349(_find_and_load)
+      5/4    0.000    0.000    0.007    0.002 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)
+        6    0.000    0.000    0.007    0.001 optimize.py:213(_evolve_population)
+       14    0.000    0.000    0.006    0.000 indexing.py:1415(_getitem_axis)
+      5/4    0.000    0.000    0.006    0.002 <frozen importlib._bootstrap>:911(_load_unlocked)
+        4    0.000    0.000    0.006    0.002 <frozen importlib._bootstrap_external>:993(exec_module)
+       58    0.000    0.000    0.006    0.000 construction.py:531(sanitize_array)
+      108    0.000    0.000    0.006    0.000 base.py:7919(ensure_index)
+       16    0.000    0.000    0.005    0.000 base.py:486(__new__)
+
+

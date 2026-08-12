@@ -1,0 +1,15 @@
+{
+  "config": {
+    "population_size": 4000,
+    "lineup_size": 9,
+    "repeats": 3
+  },
+  "python_kernel": {
+    "avg_s": 0.01786303333331792,
+    "min_s": 0.016967200001090532,
+    "max_s": 0.019020499999896856
+  },
+  "numba_available": false,
+  "numba_kernel": null,
+  "speedup_x": null
+}

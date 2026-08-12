@@ -30,24 +30,33 @@ from pangadfs.base import PenaltyBase
 
 class DistancePenalty(PenaltyBase):
 
-    def penalty(self, *, population: np.ndarray) -> np.ndarray:
+    def penalty(self,
+                *,
+                population: np.ndarray,
+                player_weights: np.ndarray = None) -> np.ndarray:
         """Calculates distance penalty for overlapping lineups
         
         Args:
             population (np.ndarray): the population
+            player_weights (np.ndarray): optional per-player weighting vector where
+                index == player ID. If provided, weighted one-hot vectors are used
+                for distance calculation.
 
         Returns:
             np.ndarray: 1D array of float
-
-        TODO: add parameters for positional weighting
-              that is, can prioritize distance at WR or other position
-              conversely, can deprioritize distance at RB or other position
         """
         # one-hot encoded population
         # so, assume pool has ids 0, 1, 2, 3, 4
         # lineup is 1, 2
         # ohe would be [0, 1, 1, 0, 0] for that lineup
         ohe = np.sum((np.arange(population.max()) == population[...,None]-1).astype(int), axis=1)
+
+        if player_weights is not None:
+            player_weights = np.asarray(player_weights, dtype=float)
+            n_cols = ohe.shape[1]
+            if player_weights.shape[0] < n_cols:
+                raise ValueError('player_weights must be at least population.max() in length')
+            ohe = ohe * player_weights[:n_cols]
 
         # now calculate distance between individuals in population
         # dist is a square matrix same length as population
