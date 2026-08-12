@@ -113,7 +113,7 @@ class GeneticAlgorithm:
                 pops = []
                 for ext in self.extension_managers['crossover'].extensions:
                     try:
-                        pops.append(ext.obj.mutate(**params, **kwargs))
+                        pops.append(ext.obj.crossover(**params, **kwargs))
                     except:
                         continue
                 return np.aggregate(pops)

@@ -94,7 +94,7 @@ def exposure(population: np.ndarray = None) -> Dict[int, int]:
         >>> print([round(i, 3) for i in sorted(top_exposure / len(fittest_population), reverse=True)])            
 
     """
-    flat = population.flatten
+    flat = population.flatten()
     return dict(zip(flat, np.bincount(flat)[flat]))
 
 
