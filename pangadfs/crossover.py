@@ -15,21 +15,32 @@ class CrossoverDefault(CrossoverBase):
     def _diverse(self, *, population: np.ndarray, **kwargs) -> np.ndarray:
         """Diverse crossover of individuals in population.
         
+        Pairs each individual with its most-diverse partner (least overlap),
+        then performs uniform crossover between the pairs.
+
         Args:
             population (np.ndarray): the population to crossover. Shape is n_individuals x n_chromosomes.
             **kwargs: Arbitrary keyword arguments
 
         Returns:
-            np.ndarray: concatenation of two offspring
+            np.ndarray: offspring from diverse-pair uniform crossover
 
         """     
-        # crosses over individuals with least common elements
-        # step one is to get diversity matrix
-        # then get indices of the minimum of each row (randomize selection among duplicates)
-        diversity_matrix = diversity(population)
-        cxidx = np.argmax(np.random.random(diversity_matrix.shape) * (diversity_matrix == diversity_matrix.min()), axis=1)
-        choice = np.random.randint(2, size=diversity_matrix.size).reshape(diversity_matrix.shape).astype(bool)   
-        return np.where(choice, diversity_matrix, cxidx)
+        # Get pairwise overlap matrix (lower = more diverse)
+        overlap_matrix = diversity(population)
+        
+        # Zero out self-overlap so we don't pair with ourselves
+        np.fill_diagonal(overlap_matrix, np.iinfo(overlap_matrix.dtype).max)
+        
+        # For each individual, find the most diverse partner (minimum overlap)
+        # Randomize tie-breaking by adding small noise
+        noise = np.random.random(overlap_matrix.shape) * 0.01
+        partner_idx = np.argmin(overlap_matrix.astype(float) + noise, axis=1)
+        
+        # Uniform crossover between each individual and its diverse partner
+        partners = population[partner_idx]
+        choice = np.random.randint(2, size=population.size).reshape(population.shape).astype(bool)
+        return np.where(choice, population, partners)
 
     def _one_point(self, *, population: np.ndarray, point: int = 3, **kwargs) -> np.ndarray:
         """Crosses over individuals in population at a single point.

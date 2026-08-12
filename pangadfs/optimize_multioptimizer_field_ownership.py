@@ -62,9 +62,16 @@ class OptimizeMultiOptimizerFieldOwnership(OptimizeBase):
         ownership = pool[ownership_column].values if ownership_column in pool.columns else np.zeros_like(points)
 
         # Import set-based plugins
-        from pangadfs.populate_sets_optimized import PopulateMultilineupSetsOptimized
-        from pangadfs.crossover_sets_optimized import CrossoverMultilineupSetsOptimized
-        from pangadfs.mutate_sets_optimized import MutateMultilineupSetsOptimized
+        try:
+            from pangadfs.populate_sets_optimized import PopulateMultilineupSetsOptimized
+            from pangadfs.crossover_sets_optimized import CrossoverMultilineupSetsOptimized
+            from pangadfs.mutate_sets_optimized import MutateMultilineupSetsOptimized
+        except ImportError as e:
+            raise ImportError(
+                "OptimizeMultiOptimizerFieldOwnership requires set-based plugins "
+                "(populate_sets_optimized, crossover_sets_optimized, mutate_sets_optimized) "
+                "which are not yet implemented. See REFACTORING.md for details."
+            ) from e
         
         # Initialize plugins
         populate_sets = PopulateMultilineupSetsOptimized()
