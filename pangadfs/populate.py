@@ -8,7 +8,7 @@ from typing import Dict
 import numpy as np
 
 from pangadfs.base import PopulateBase
-from pangadfs.misc import multidimensional_shifting
+from pangadfs.sampling import multidimensional_shifting
 
 
 class PopulateDefault(PopulateBase):

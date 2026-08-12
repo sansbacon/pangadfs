@@ -10,7 +10,7 @@ Tracking document for simplification, bug fixes, and performance improvements.
   - `flat = population.flatten` assigns the method object, not the result.
   - Fix: `flat = population.flatten()`
 
-- [ ] **`ga.py:116` — `crossover()` calls `ext.obj.mutate()`**
+- [x] **`ga.py:116` — `crossover()` calls `ext.obj.mutate()`**
   - Should be `ext.obj.crossover(**params, **kwargs)`
 
 - [ ] **`ga.py:299` — `populate()` iterates wrong extension manager**
@@ -38,10 +38,9 @@ Tracking document for simplification, bug fixes, and performance improvements.
 
 ## 2. Performance
 
-- [ ] **Vectorize `PositionValidate`**
-  - Current: pure Python loop over every lineup in population
-  - `PositionValidateOptimized` exists but isn't wired as default
-  - Action: make vectorized version the only implementation, remove the loop-based one
+- [x] **Vectorize `PositionValidate`**
+  - Replaced loop-based + "Optimized" dual classes with single vectorized implementation
+  - Uses integer-encoded position array + bincount for O(1) per-player lookup, fully vectorized mask
 
 - [ ] **Vectorize `FitnessMultiOptimizerFieldOwnership._calculate_diversity`**
   - Current: nested Python loops over all lineup pairs — O(n²) with set operations
@@ -64,11 +63,10 @@ Tracking document for simplification, bug fixes, and performance improvements.
 
 ## 3. Simplification & Refactoring
 
-- [ ] **Collapse `base.py` boilerplate**
-  - 9 classes that are identical except method name
-  - Option A: Single `PluginBase` with `__init_subclass__` that auto-creates the abstract method
-  - Option B: Use `typing.Protocol` (no inheritance required, duck-typing)
-  - Either way, remove the duplicated `logging.getLogger(__name__).addHandler(logging.NullHandler())` × 9
+- [x] **Collapse `base.py` boilerplate**
+  - Added `PluginBase` parent class with shared `__init__` (logging NullHandler configured once)
+  - 9 subclasses now just declare their `@abstractmethod` — no duplicated `__init__`
+  - Fixed incorrect docstring on `MutateBase` (was "crossover plugins")
 
 - [ ] **Remove `locals().copy()` pattern from `ga.py`**
   - Used in every method (pool, pospool, populate, fitness, crossover, mutate, select, validate)
@@ -93,10 +91,10 @@ Tracking document for simplification, bug fixes, and performance improvements.
 
 ## 4. Structural Improvements
 
-- [ ] **Extract `misc.py` into focused modules**
-  - `sampling.py` — `multidimensional_shifting`, `parents`
-  - `metrics.py` — `diversity`, `exposure`, `calculate_jaccard_diversity`
-  - `misc.py` is currently a grab-bag
+- [x] **Extract `misc.py` into focused modules**
+  - Created `sampling.py` — `multidimensional_shifting` (consolidated fast+numba), `parents`
+  - Created `metrics.py` — `diversity`, `exposure`, `calculate_jaccard_diversity`
+  - `misc.py` is now a thin re-export shim for backward compatibility
 
 - [ ] **Extract generation loop from `OptimizeDefault.optimize`**
   - Method is ~180 lines of procedural logic
@@ -115,11 +113,18 @@ Tracking document for simplification, bug fixes, and performance improvements.
 
 ## 5. Minor / Style
 
-- [ ] Add return type annotations to all public methods
-- [ ] Remove unused import `numpy.testing as npt` in `misc.py`
-- [ ] Remove unused import `scipy.stats.chisquare` in `misc.py`
-- [ ] Fix docstring in `MutateBase` (says "Base class for crossover plugins")
-- [ ] Remove commented-out code in `penalty.py` line 111
+- [x] Add return type annotations to all public methods
+  - Added to all 9 abstract methods in `base.py` (np.ndarray, pd.DataFrame, Dict as appropriate)
+  - Fixed missing annotation on `FitnessDefault.fitness`
+  - All other implementations already had annotations
+- [x] Remove unused import `numpy.testing as npt` in `misc.py`
+  - `misc.py` is now a 2-line re-export shim — no direct imports remain
+- [x] Remove unused import `scipy.stats.chisquare` in `misc.py`
+  - Same — removed when misc.py was rewritten
+- [x] Fix docstring in `MutateBase` (says "Base class for crossover plugins")
+  - Fixed to "Base class for mutate plugins" in the earlier base.py refactoring
+- [x] Remove commented-out code in `penalty.py` line 111
+  - Removed when `HighOwnershipPenalty` was deleted
 
 ---
 

@@ -63,27 +63,57 @@ class FitnessMultiOptimizerFieldOwnership(FitnessBase):
 
     @staticmethod
     def _calculate_diversity(population_sets: np.ndarray, method: str) -> np.ndarray:
-        """Calculates the diversity for each lineup set."""
+        """Calculates the mean pairwise diversity for each lineup set.
+        
+        Uses vectorized one-hot overlap matrix instead of nested Python loops.
+        """
         n_sets = population_sets.shape[0]
+        n_lineups = population_sets.shape[1]
+        lineup_size = population_sets.shape[2]
         diversity_scores = np.zeros(n_sets)
+        
+        if n_lineups <= 1:
+            return diversity_scores
+        
+        # Number of unique pairs per set
+        n_pairs = n_lineups * (n_lineups - 1) // 2
+        
         for i in range(n_sets):
-            lineup_set = population_sets[i]
-            n_lineups = lineup_set.shape[0]
-            if n_lineups <= 1:
-                continue
+            lineup_set = population_sets[i]  # shape (n_lineups, lineup_size)
             
-            overlaps = []
-            for j in range(n_lineups):
-                for k in range(j + 1, n_lineups):
-                    if method == 'jaccard':
-                        set1, set2 = set(lineup_set[j]), set(lineup_set[k])
-                        intersection = len(set1 & set2)
-                        union = len(set1 | set2)
-                        overlap = intersection / union if union > 0 else 0.0
-                    else: # hamming
-                        overlap = np.mean(lineup_set[j] == lineup_set[k])
-                    overlaps.append(1 - overlap) # we want to maximize diversity (1 - overlap)
-            diversity_scores[i] = np.mean(overlaps) if overlaps else 0
+            if method == 'jaccard':
+                # Build one-hot membership matrix: (n_lineups, n_unique_players)
+                uniques, inverse = np.unique(lineup_set, return_inverse=True)
+                n_unique = len(uniques)
+                membership = np.zeros((n_lineups, n_unique), dtype=np.uint8)
+                rows = np.repeat(np.arange(n_lineups), lineup_size)
+                np.add.at(membership, (rows, inverse), 1)
+                # Clip to binary (presence/absence for Jaccard)
+                membership = (membership > 0).astype(np.uint8)
+                
+                # Pairwise intersection and union via dot products
+                intersection_matrix = membership @ membership.T  # (n_lineups, n_lineups)
+                sizes = membership.sum(axis=1)  # per-lineup unique player count
+                union_matrix = sizes[:, None] + sizes[None, :] - intersection_matrix
+                
+                # Extract upper triangle (unique pairs)
+                triu_idx = np.triu_indices(n_lineups, k=1)
+                intersections = intersection_matrix[triu_idx]
+                unions = union_matrix[triu_idx]
+                
+                similarities = np.divide(intersections, unions, 
+                                        out=np.zeros_like(intersections, dtype=float),
+                                        where=unions > 0)
+                diversity_scores[i] = (1.0 - similarities).mean()
+            else:
+                # Hamming: pairwise element-wise equality
+                # overlap[j,k] = mean(lineup_j == lineup_k)
+                # Vectorized: broadcast comparison
+                eq_matrix = (lineup_set[:, None, :] == lineup_set[None, :, :]).mean(axis=2)
+                triu_idx = np.triu_indices(n_lineups, k=1)
+                overlaps = eq_matrix[triu_idx]
+                diversity_scores[i] = (1.0 - overlaps).mean()
+        
         return diversity_scores
 
     @staticmethod

@@ -7,7 +7,6 @@ from typing import Dict
 
 import numpy as np
 import pandas as pd
-from numpy_indexed import unique
 
 from pangadfs.base import ValidateBase
 

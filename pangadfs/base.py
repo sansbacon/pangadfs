@@ -1,116 +1,101 @@
-# gadfs/gadfs/base.py
+# pangadfs/pangadfs/base.py
 # -*- coding: utf-8 -*-
 # Copyright (C) 2020 Eric Truett
 # Licensed under the MIT License
 
 import abc
 import logging
+from typing import Any, Dict, Tuple
+
+import numpy as np
+import pandas as pd
 
 
-class CrossoverBase(metaclass=abc.ABCMeta):
-    """Base class for crossover plugins."""
+class PluginBase(metaclass=abc.ABCMeta):
+    """Common base for all pangadfs plugins.
+    
+    Subclasses only need to define a single @abstractmethod.
+    Logging NullHandler is configured once here.
+    """
 
     def __init__(self):
         logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+
+class CrossoverBase(PluginBase):
+    """Base class for crossover plugins."""
 
     @abc.abstractmethod
     def crossover(self, *args, **kwargs):
         """Implement crossover."""
 
 
-class FitnessBase(metaclass=abc.ABCMeta):
+class FitnessBase(PluginBase):
     """Base class for fitness plugins."""
-
-    def __init__(self):
-        logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
     def fitness(self, *args, **kwargs):
         """Implement fitness."""
 
 
-class MutateBase(metaclass=abc.ABCMeta):
-    """Base class for crossover plugins."""
-
-    def __init__(self):
-        logging.getLogger(__name__).addHandler(logging.NullHandler())
+class MutateBase(PluginBase):
+    """Base class for mutate plugins."""
 
     @abc.abstractmethod
     def mutate(self, *args, **kwargs):
         """Mutates population at given mutation rate."""
 
 
-class OptimizeBase(metaclass=abc.ABCMeta):
+class OptimizeBase(PluginBase):
     """Base class for optimize plugins."""
-
-    def __init__(self):
-        logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
     def optimize(self, *args, **kwargs):
         """Implements optimize."""
 
 
-class PenaltyBase(metaclass=abc.ABCMeta):
+class PenaltyBase(PluginBase):
     """Base class for penalty plugins."""
-
-    def __init__(self):
-        logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
     def penalty(self, *args, **kwargs):
         """Calculates penalty for population fitness."""
 
 
-class PopulateBase(metaclass=abc.ABCMeta):
+class PopulateBase(PluginBase):
     """Base class for populate plugins."""
-
-    def __init__(self):
-        logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
     def populate(self, *args, **kwargs):
         """Creates initial population from pool."""
 
 
-class PoolBase(metaclass=abc.ABCMeta):
+class PoolBase(PluginBase):
     """Base class for pool plugins."""
-
-    def __init__(self):
-        logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
     def pool(self, *args, **kwargs):
         """Implement pool."""
 
 
-class PospoolBase(metaclass=abc.ABCMeta):
+class PospoolBase(PluginBase):
     """Base class for pospool plugins."""
-
-    def __init__(self):
-        logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
     def pospool(self, *args, **kwargs):
         """Implement pospool."""
 
 
-class SelectBase(metaclass=abc.ABCMeta):
+class SelectBase(PluginBase):
     """Base class for select plugins."""
-
-    def __init__(self):
-        logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
     def select(self, *args, **kwargs):
         """Implement select."""
 
 
-class ValidateBase(metaclass=abc.ABCMeta):
+class ValidateBase(PluginBase):
     """Base class for validate plugins."""
-
-    def __init__(self):
-        logging.getLogger(__name__).addHandler(logging.NullHandler())
 
     @abc.abstractmethod
     def validate(self, *args, **kwargs):
